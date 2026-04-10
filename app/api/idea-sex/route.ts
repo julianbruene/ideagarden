@@ -28,8 +28,8 @@ export async function POST(req: Request) {
       messages: [{ role: 'user', content: prompt }],
     })
 
-    const result = msg.content[0].type === 'text' ? msg.content[0].text : null
-    return NextResponse.json({ result })
+    const question = msg.content[0].type === 'text' ? msg.content[0].text : null
+    return NextResponse.json({ question })
   } catch (err) {
     console.error('Idea Sex error:', err)
     return NextResponse.json({ error: 'AI request failed' }, { status: 500 })

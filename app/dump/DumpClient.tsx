@@ -179,6 +179,7 @@ export default function DumpClient({ initialNodes }: Props) {
           nodes={nodes}
           preselected={ideaSexPair}
           onClose={() => setShowIdeaSex(false)}
+          onNodeCreated={handleNodeCreated}
         />
       )}
     </div>
