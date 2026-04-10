@@ -7,7 +7,10 @@
       "Bash(mkdir -p \"/c/Users/PC/OneDrive/Dokumente/Claude Code/Idea Garden/app/api/export/[id]\")",
       "Bash(npm install:*)",
       "Bash(npx tsc:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(gh api:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:ideagarden-weld.vercel.app)"
     ]
   }
 }
