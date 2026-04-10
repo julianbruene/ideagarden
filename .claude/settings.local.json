@@ -10,7 +10,8 @@
       "Bash(npm run:*)",
       "Bash(gh api:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:ideagarden-weld.vercel.app)"
+      "WebFetch(domain:ideagarden-weld.vercel.app)",
+      "Bash(node scripts/generate-icons.mjs)"
     ]
   }
 }

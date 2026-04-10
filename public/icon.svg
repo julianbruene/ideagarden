@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#4A7C59"/>
+  <!-- Stem -->
+  <line x1="256" y1="380" x2="256" y2="260" stroke="#EDF2EF" stroke-width="20" stroke-linecap="round"/>
+  <!-- Left leaf -->
+  <path d="M256 290 C256 290 180 260 160 190 C200 185 256 230 256 290Z" fill="#EDF2EF"/>
+  <!-- Right leaf -->
+  <path d="M256 310 C256 310 332 280 352 210 C312 205 256 250 256 310Z" fill="#EDF2EF" opacity="0.85"/>
+  <!-- Sprout top -->
+  <path d="M256 260 C256 220 240 190 256 160 C272 190 256 220 256 260Z" fill="#EDF2EF"/>
+  <!-- Ground line -->
+  <line x1="180" y1="380" x2="332" y2="380" stroke="#EDF2EF" stroke-width="16" stroke-linecap="round" opacity="0.6"/>
+</svg>

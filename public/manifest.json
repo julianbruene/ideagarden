@@ -1,0 +1,42 @@
+{
+  "name": "Idea Garden",
+  "short_name": "Garden",
+  "description": "Where raw thoughts grow into something usable.",
+  "start_url": "/dump",
+  "display": "standalone",
+  "background_color": "#F8F6F1",
+  "theme_color": "#4A7C59",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dump",
+      "url": "/dump",
+      "description": "Open the Dump"
+    },
+    {
+      "name": "Garden",
+      "url": "/garden",
+      "description": "Open the Garden"
+    }
+  ]
+}
