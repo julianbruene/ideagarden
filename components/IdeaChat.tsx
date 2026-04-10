@@ -16,8 +16,13 @@ export default function IdeaChat({ ideaId, allInputs, onMessageAdded }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Show full conversation (user + AI)
-  const conversation = allInputs
+  // Only show chat messages (is_note = false/undefined means it's a chat message or AI response)
+  const conversation = allInputs.filter(
+    (i) => i.role === 'assistant' || i.is_note === false || (!i.is_note && i.role === 'user' && i.is_note !== true)
+  ).filter(
+    // Exclude pure notes (is_note = true)
+    (i) => i.is_note !== true
+  )
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -34,6 +39,7 @@ export default function IdeaChat({ ideaId, allInputs, onMessageAdded }: Props) {
       user_id: '',
       content: trimmed,
       role: 'user',
+      is_note: false,
       created_at: new Date().toISOString(),
     }
 
@@ -79,6 +85,7 @@ export default function IdeaChat({ ideaId, allInputs, onMessageAdded }: Props) {
         user_id: '',
         content: fullText,
         role: 'assistant',
+        is_note: false,
         created_at: new Date().toISOString(),
       }
       onMessageAdded([...withUser, aiMsg])
@@ -98,11 +105,11 @@ export default function IdeaChat({ ideaId, allInputs, onMessageAdded }: Props) {
   }
 
   function formatTime(iso: string) {
-    return new Date(iso).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
+    return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 scrollbar-hide">
         {conversation.length === 0 && !streaming && (
@@ -129,7 +136,6 @@ export default function IdeaChat({ ideaId, allInputs, onMessageAdded }: Props) {
           </div>
         ))}
 
-        {/* Streaming bubble */}
         {streaming && (
           <div className="flex justify-start animate-fade-in">
             <div className="max-w-[85%] rounded-2xl rounded-bl-sm px-4 py-3 bg-white border border-garden-border text-sm text-garden-text leading-relaxed">
@@ -149,8 +155,8 @@ export default function IdeaChat({ ideaId, allInputs, onMessageAdded }: Props) {
         <div ref={bottomRef} />
       </div>
 
-      {/* Chat input */}
-      <div className="border-t border-garden-border bg-garden-surface px-3 py-3">
+      {/* Input */}
+      <div className="flex-shrink-0 border-t border-garden-border bg-garden-surface px-3 py-3">
         <form onSubmit={handleSubmit} className="flex gap-2 items-end">
           <textarea
             ref={textareaRef}
@@ -169,8 +175,8 @@ export default function IdeaChat({ ideaId, allInputs, onMessageAdded }: Props) {
           >
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="19" x2="12" y2="5" />
-              <polyline points="5 12 12 5 19 12" />
+              <line x1="12" y1="19" x2="12" y2="5"/>
+              <polyline points="5 12 12 5 19 12"/>
             </svg>
           </button>
         </form>

@@ -20,6 +20,7 @@ export async function POST(req: Request, { params }: Params) {
       user_id: user.id,
       content: content.trim(),
       role: 'user',
+      is_note: true,
     })
     .select()
     .single()

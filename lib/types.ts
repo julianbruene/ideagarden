@@ -29,6 +29,7 @@ export interface Input {
   user_id: string
   content: string
   role: InputRole
+  is_note?: boolean
   created_at: string
 }
 
