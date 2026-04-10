@@ -71,6 +71,7 @@ export async function POST(req: Request) {
       user_id: user.id,
       content: seedText,
       role: 'user',
+      is_note: true,
     })
 
     // Generate initial synthesis

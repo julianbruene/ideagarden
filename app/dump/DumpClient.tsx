@@ -37,8 +37,8 @@ export default function DumpClient({ initialNodes }: Props) {
     })
     const { idea } = await res.json()
 
-    // Mark node as promoted locally
-    setNodes((prev) => prev.map((n) => n.id === id ? { ...n, promoted: true } : n))
+    // Remove node from Dump view after promotion
+    setNodes((prev) => prev.filter((n) => n.id !== id))
     router.push(`/garden/${idea.id}`)
   }
 
