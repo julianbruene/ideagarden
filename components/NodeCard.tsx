@@ -11,6 +11,8 @@ interface Props {
   onDelete?: () => void
   onPromote?: () => void
   selectionMode?: boolean
+  hearted?: boolean
+  onHeart?: () => void
 }
 
 function formatDate(iso: string) {
@@ -31,7 +33,7 @@ const TYPE_ICON: Record<string, string> = {
   text: '',
 }
 
-export default function NodeCard({ node, selected, onSelect, onDelete, onPromote, selectionMode }: Props) {
+export default function NodeCard({ node, selected, onSelect, onDelete, onPromote, selectionMode, hearted, onHeart }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [promoting, setPromoting] = useState(false)
 
@@ -125,13 +127,35 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
         </div>
       </div>
 
-      {/* Action bar — always visible, not hidden behind tap */}
+      {/* Action bar */}
       {!selectionMode && (
         <div className="flex border-t border-garden-border/60">
+
+          {/* Heart — left side, icon only */}
+          <button
+            onClick={(e) => { e.stopPropagation(); onHeart?.() }}
+            title={hearted ? 'Herz entfernen' : 'Für Idea Sex vormerken'}
+            className={`px-4 py-2.5 transition-colors rounded-bl-2xl ${
+              hearted
+                ? 'text-rose-500 hover:text-rose-400 hover:bg-rose-50'
+                : 'text-garden-muted/40 hover:text-rose-400 hover:bg-rose-50'
+            }`}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24"
+              fill={hearted ? 'currentColor' : 'none'}
+              stroke="currentColor" strokeWidth={1.8}
+              strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+          </button>
+
+          <div className="w-px bg-garden-border/60" />
+
+          {/* In Garden — center */}
           <button
             onClick={handlePromote}
             disabled={node.promoted || promoting}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-garden-accent hover:bg-garden-accent-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed rounded-bl-2xl"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-xs font-medium text-garden-accent hover:bg-garden-accent-light transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {promoting ? (
               <span className="w-3 h-3 border-2 border-garden-accent border-t-transparent rounded-full animate-spin" />
@@ -149,12 +173,13 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
 
           <div className="w-px bg-garden-border/60" />
 
+          {/* Delete — right side, icon only */}
           <button
             onClick={(e) => { e.stopPropagation(); onDelete?.() }}
-            className="px-4 py-2.5 text-garden-muted hover:text-red-500 hover:bg-red-50 transition-colors rounded-br-2xl"
+            className="px-4 py-2.5 text-garden-muted/40 hover:text-red-500 hover:bg-red-50 transition-colors rounded-br-2xl"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-              strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+              strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               <polyline points="3 6 5 6 21 6" />
               <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
               <path d="M10 11v6M14 11v6" />

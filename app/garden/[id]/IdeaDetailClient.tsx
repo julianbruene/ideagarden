@@ -159,6 +159,7 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
             notes={inputs}
             onNoteAdded={(note) => setInputs((prev) => [...prev, note])}
             onNoteRemoved={(id) => setInputs((prev) => prev.filter((i) => i.id !== id))}
+            onNoteUpdated={(updated) => setInputs((prev) => prev.map((i) => i.id === updated.id ? updated : i))}
           />
         </div>
 

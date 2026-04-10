@@ -30,6 +30,7 @@ export interface Input {
   content: string
   role: InputRole
   is_note?: boolean
+  starred?: boolean
   created_at: string
 }
 

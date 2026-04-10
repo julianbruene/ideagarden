@@ -10,6 +10,7 @@ interface Props {
   notes: Input[]
   onNoteAdded: (note: Input) => void
   onNoteRemoved: (id: string) => void
+  onNoteUpdated: (note: Input) => void
 }
 
 function formatDate(iso: string) {
@@ -25,7 +26,7 @@ function formatDate(iso: string) {
 function isImageNote(content: string) { return content.startsWith('[img]') }
 function getImageUrl(content: string) { return content.slice(5) }
 
-export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved }: Props) {
+export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, onNoteUpdated }: Props) {
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -38,9 +39,14 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved }:
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [notes])
 
-  // Show notes: is_note = true, or is_note is absent/null (backward compat)
-  // Hide only entries explicitly marked is_note = false (those are chat messages)
-  const userNotes = notes.filter((n) => n.role === 'user' && n.is_note !== false)
+  // Show notes (is_note !== false), starred ones first then chronological
+  const userNotes = notes
+    .filter((n) => n.role === 'user' && n.is_note !== false)
+    .sort((a, b) => {
+      if (a.starred && !b.starred) return -1
+      if (!a.starred && b.starred) return 1
+      return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    })
 
   async function uploadImage(file: File): Promise<string | null> {
     const supabase = createClient()
@@ -121,6 +127,17 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved }:
     await fetch(`/api/inputs/${id}`, { method: 'POST' })
   }
 
+  async function handleToggleStar(note: Input) {
+    const next = !note.starred
+    // Optimistic update
+    onNoteUpdated({ ...note, starred: next })
+    await fetch(`/api/inputs/${note.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ starred: next }),
+    })
+  }
+
   const busy = submitting || uploading
 
   return (
@@ -138,29 +155,56 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved }:
             key={note.id}
             className="bg-garden-bg rounded-xl border border-garden-border overflow-hidden animate-fade-in"
           >
-            {/* Content */}
-            {isImageNote(note.content) ? (
-              <Image
-                src={getImageUrl(note.content)}
-                alt="Note image"
-                width={400}
-                height={300}
-                className="w-full object-cover max-h-56"
-                unoptimized
-              />
-            ) : (
-              <div className="px-3.5 pt-3 pb-2">
-                <p className="text-sm text-garden-text leading-relaxed whitespace-pre-wrap break-words">
-                  {note.content}
-                </p>
-              </div>
-            )}
+            {/* Star button — top right */}
+            <div className="relative">
+              <button
+                onClick={() => handleToggleStar(note)}
+                title={note.starred ? 'Stern entfernen' : 'Als Key-Idee markieren'}
+                className={`absolute top-2.5 right-2.5 p-1 rounded-lg transition-colors z-10 ${
+                  note.starred
+                    ? 'text-amber-400 hover:text-amber-300'
+                    : 'text-garden-muted/30 hover:text-amber-400'
+                }`}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24"
+                  fill={note.starred ? 'currentColor' : 'none'}
+                  stroke="currentColor" strokeWidth={1.8}
+                  strokeLinecap="round" strokeLinejoin="round">
+                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                </svg>
+              </button>
+
+              {/* Content */}
+              {isImageNote(note.content) ? (
+                <Image
+                  src={getImageUrl(note.content)}
+                  alt="Note image"
+                  width={400}
+                  height={300}
+                  className="w-full object-cover max-h-56"
+                  unoptimized
+                />
+              ) : (
+                <div className="px-3.5 pt-3 pb-2 pr-9">
+                  <p className="text-sm text-garden-text leading-relaxed whitespace-pre-wrap break-words">
+                    {note.content}
+                  </p>
+                </div>
+              )}
+            </div>
 
             {/* Footer: date + actions */}
             <div className="flex items-center justify-between px-3 pb-2">
-              <span className="text-[10px] text-garden-muted/60">{formatDate(note.created_at)}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-garden-muted/60">{formatDate(note.created_at)}</span>
+                {note.starred && (
+                  <span className="text-[9px] text-amber-500 bg-amber-50 px-1.5 py-0.5 rounded-full font-medium">
+                    Key
+                  </span>
+                )}
+              </div>
 
-              {/* Action buttons — tap to reveal */}
+              {/* Action buttons */}
               {actionId === note.id ? (
                 <div className="flex items-center gap-1">
                   <button

@@ -3,6 +3,26 @@ import { createClient } from '@/lib/supabase/server'
 
 interface Params { params: Promise<{ id: string }> }
 
+// Toggle starred on a note
+export async function PATCH(req: Request, { params }: Params) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const { starred } = await req.json()
+  const { data, error } = await supabase
+    .from('inputs')
+    .update({ starred })
+    .eq('id', id)
+    .eq('user_id', user.id)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ input: data })
+}
+
 // Delete an input
 export async function DELETE(_req: Request, { params }: Params) {
   const { id } = await params

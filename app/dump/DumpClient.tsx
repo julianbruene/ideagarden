@@ -18,6 +18,8 @@ export default function DumpClient({ initialNodes }: Props) {
   const [selectionMode, setSelectionMode] = useState(false)
   const [showIdeaSex, setShowIdeaSex] = useState(false)
   const [ideaSexPair, setIdeaSexPair] = useState<[string, string] | undefined>()
+  // Heart: up to 2 nodes pre-selected for Idea Sex
+  const [hearted, setHearted] = useState<Set<string>>(new Set())
   const router = useRouter()
 
   function handleNodeCreated(node: IdeaNode) {
@@ -26,6 +28,7 @@ export default function DumpClient({ initialNodes }: Props) {
 
   async function handleDelete(id: string) {
     setNodes((prev) => prev.filter((n) => n.id !== id))
+    setHearted((prev) => { const next = new Set(prev); next.delete(id); return next })
     await fetch(`/api/nodes/${id}`, { method: 'DELETE' })
   }
 
@@ -42,9 +45,26 @@ export default function DumpClient({ initialNodes }: Props) {
       return
     }
 
-    // Remove node from Dump view after promotion
     setNodes((prev) => prev.filter((n) => n.id !== id))
+    setHearted((prev) => { const next = new Set(prev); next.delete(id); return next })
     router.push(`/garden/${data.idea.id}`)
+  }
+
+  function toggleHeart(id: string) {
+    setHearted((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        if (next.size >= 2) {
+          // remove the oldest heart
+          const [first] = next
+          next.delete(first)
+        }
+        next.add(id)
+      }
+      return next
+    })
   }
 
   function toggleSelect(id: string) {
@@ -54,7 +74,6 @@ export default function DumpClient({ initialNodes }: Props) {
         next.delete(id)
       } else {
         if (next.size >= 2) {
-          // replace oldest selection
           const [first] = next
           next.delete(first)
         }
@@ -71,6 +90,18 @@ export default function DumpClient({ initialNodes }: Props) {
     setSelected(new Set())
   }
 
+  function handleIdeaSexClick() {
+    const heartedArr = Array.from(hearted)
+    if (heartedArr.length === 2) {
+      openIdeaSex([heartedArr[0], heartedArr[1]])
+    } else if (heartedArr.length === 1) {
+      // one heart: preselect that node, let IdeaSex pick the second randomly
+      openIdeaSex(undefined)
+    } else {
+      openIdeaSex()
+    }
+  }
+
   function startSelectionMode() {
     setSelectionMode(true)
     setSelected(new Set())
@@ -82,6 +113,7 @@ export default function DumpClient({ initialNodes }: Props) {
   }
 
   const selectedArr = Array.from(selected)
+  const heartedArr = Array.from(hearted)
   const canIdeaSex = nodes.length >= 2
 
   return (
@@ -95,11 +127,15 @@ export default function DumpClient({ initialNodes }: Props) {
               <>
                 {canIdeaSex && (
                   <button
-                    onClick={() => openIdeaSex()}
-                    className="text-xs px-3 py-1.5 rounded-xl bg-garden-seed-light text-garden-seed border border-garden-seed/30 font-medium hover:bg-garden-seed/10 transition-colors"
-                    title="Pick two nodes and see what happens"
+                    onClick={handleIdeaSexClick}
+                    className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-colors border ${
+                      heartedArr.length > 0
+                        ? 'bg-rose-50 text-rose-500 border-rose-200 hover:bg-rose-100'
+                        : 'bg-garden-seed-light text-garden-seed border-garden-seed/30 hover:bg-garden-seed/10'
+                    }`}
+                    title={heartedArr.length > 0 ? `${heartedArr.length} Note(n) vorgemerkt` : 'Zwei Notes kollidieren lassen'}
                   >
-                    Idea Sex
+                    {heartedArr.length > 0 ? `Idea Sex ♥ ${heartedArr.length}` : 'Idea Sex'}
                   </button>
                 )}
                 {nodes.length >= 2 && (
@@ -154,6 +190,23 @@ export default function DumpClient({ initialNodes }: Props) {
           </div>
         )}
 
+        {/* Heart hint — shown when at least 1 hearted */}
+        {!selectionMode && heartedArr.length > 0 && (
+          <div className="bg-rose-50 border border-rose-100 rounded-xl px-4 py-2.5 text-xs text-rose-500 flex items-center justify-between">
+            <span>
+              {heartedArr.length === 1
+                ? '1 Note für Idea Sex vorgemerkt'
+                : '2 Notes für Idea Sex vorgemerkt'}
+            </span>
+            <button
+              onClick={() => setHearted(new Set())}
+              className="text-rose-400 hover:text-rose-600 transition-colors ml-2"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         {/* Selection mode banner */}
         {selectionMode && (
           <div className="bg-garden-seed-light border border-garden-seed/20 rounded-xl px-4 py-3 text-xs text-garden-seed">
@@ -169,9 +222,11 @@ export default function DumpClient({ initialNodes }: Props) {
               node={node}
               selected={selected.has(node.id)}
               selectionMode={selectionMode}
+              hearted={hearted.has(node.id)}
               onSelect={() => toggleSelect(node.id)}
               onDelete={() => handleDelete(node.id)}
               onPromote={() => handlePromote(node.id)}
+              onHeart={() => toggleHeart(node.id)}
             />
           ))}
         </div>
@@ -183,7 +238,7 @@ export default function DumpClient({ initialNodes }: Props) {
         <IdeaSexModal
           nodes={nodes}
           preselected={ideaSexPair}
-          onClose={() => setShowIdeaSex(false)}
+          onClose={() => { setShowIdeaSex(false); setHearted(new Set()) }}
           onNodeCreated={handleNodeCreated}
         />
       )}
