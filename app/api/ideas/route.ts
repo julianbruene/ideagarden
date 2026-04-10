@@ -66,13 +66,14 @@ export async function POST(req: Request) {
   if (sourceContents.length > 0) {
     const seedText = sourceContents.join('\n\n---\n\n')
 
-    await supabase.from('inputs').insert({
+    const { error: inputError } = await supabase.from('inputs').insert({
       idea_id: idea.id,
       user_id: user.id,
       content: seedText,
       role: 'user',
       is_note: true,
     })
+    if (inputError) console.error('Seed input insert failed:', inputError.message)
 
     // Generate initial synthesis
     try {
