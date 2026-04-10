@@ -41,18 +41,18 @@ export async function POST(req: Request) {
   const sourceContents: string[] = []
 
   if (source_node_ids.length > 0) {
-    const { data: sourceNodes, error: nodesError } = await supabase
+    const { data: sourceNodes } = await supabase
       .from('nodes')
-      .select('id, content, content_type, promoted, user_id')
+      .select('id, content, content_type, image_url')
       .in('id', source_node_ids)
 
-    // Debug: surface exactly what the query returned
-    idea._debug_sourceNodes = sourceNodes
-    idea._debug_nodesError = nodesError?.message ?? null
-    idea._debug_user_id = user.id
-
     for (const n of sourceNodes ?? []) {
-      if (n.content) sourceContents.push(n.content)
+      if (n.content_type === 'image' && n.image_url) {
+        // Store image notes using the same [img] convention as IdeaNotes
+        sourceContents.push(`[img]${n.image_url}`)
+      } else if (n.content) {
+        sourceContents.push(n.content)
+      }
     }
 
     // Mark nodes as promoted
@@ -85,10 +85,6 @@ export async function POST(req: Request) {
 
     if (inputError) {
       console.error('Seed input insert failed:', inputError.message)
-      // Surface the error in response so client can see it during debugging
-      idea._seedInputError = inputError.message
-    } else {
-      idea._seedInput = insertedInput
     }
 
     // Generate initial synthesis

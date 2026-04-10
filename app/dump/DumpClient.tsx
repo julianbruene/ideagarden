@@ -36,7 +36,6 @@ export default function DumpClient({ initialNodes }: Props) {
       body: JSON.stringify({ source_node_ids: [id] }),
     })
     const data = await res.json()
-    console.log('[promote] API response:', JSON.stringify(data))
 
     if (!data.idea?.id) {
       console.error('[promote] No idea ID returned', data)
