@@ -9,6 +9,7 @@ export default async function DumpPage() {
   const { data: nodes } = await supabase
     .from('nodes')
     .select('*')
+    .eq('promoted', false)
     .order('created_at', { ascending: false })
 
   return <DumpClient initialNodes={nodes ?? []} />
