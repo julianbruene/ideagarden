@@ -15,6 +15,7 @@ export default function DumpInput({ onNodeCreated }: Props) {
   const [uploading, setUploading] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const recognitionRef = useRef<any>(null)
   const supabase = createClient()
@@ -97,6 +98,17 @@ export default function DumpInput({ onNodeCreated }: Props) {
       setSubmitting(false)
     }
   }, []) // eslint-disable-line
+
+  // File picker (mobile gallery / desktop)
+  async function handleFileInput(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file || !file.type.startsWith('image/')) return
+    setUploading(true)
+    const url = await uploadImage(file)
+    if (url) await createNode(null, 'image', url)
+    setUploading(false)
+    e.target.value = ''
+  }
 
   // Drag-and-drop images
   async function handleDrop(e: React.DragEvent) {
@@ -187,6 +199,14 @@ export default function DumpInput({ onNodeCreated }: Props) {
       onDragLeave={() => setIsDragOver(false)}
       onDrop={handleDrop}
     >
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileInput}
+      />
       <form onSubmit={handleSubmit}>
         <textarea
           ref={textareaRef}
@@ -203,12 +223,13 @@ export default function DumpInput({ onNodeCreated }: Props) {
         />
 
         <div className="flex items-center justify-between px-3 pb-3">
-          {/* Left: voice */}
+          {/* Left: voice + image */}
+          <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={toggleRecording}
             disabled={busy}
-            title="Voice input"
+            title="Spracheingabe"
             className={`p-2 rounded-xl transition-all ${
               isRecording
                 ? 'bg-red-100 text-red-500 animate-pulse'
@@ -224,20 +245,30 @@ export default function DumpInput({ onNodeCreated }: Props) {
             </svg>
           </button>
 
-          <div className="flex items-center gap-2">
-            {/* Hint */}
-            {!isRecording && (
-              <span className="text-[11px] text-garden-muted/60 hidden sm:block">
-                Paste an image or ⏎ to save
-              </span>
+          {/* Image picker button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={busy}
+            title="Bild hochladen"
+            className="p-2 rounded-xl text-garden-muted hover:text-garden-text hover:bg-garden-bg transition-all disabled:opacity-40"
+          >
+            {uploading ? (
+              <span className="w-4 h-4 border-2 border-garden-muted border-t-transparent rounded-full animate-spin block" />
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
             )}
-            {isRecording && (
-              <span className="text-xs text-red-500 font-medium">Recording — tap mic to stop</span>
-            )}
+          </button>
+          </div>
 
-            {/* Uploading spinner */}
-            {busy && (
-              <div className="w-4 h-4 border-2 border-garden-accent border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center gap-2">
+            {isRecording && (
+              <span className="text-xs text-red-500 font-medium">Aufnahme läuft…</span>
             )}
 
             {/* Submit */}
