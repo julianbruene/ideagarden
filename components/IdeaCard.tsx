@@ -1,6 +1,8 @@
 'use client'
 
 import Link from 'next/link'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { Idea } from '@/lib/types'
 
 interface Props {
@@ -9,42 +11,121 @@ interface Props {
 }
 
 function formatDate(iso: string) {
-  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  return new Date(iso).toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })
 }
 
 export default function IdeaCard({ idea, inputCount = 0 }: Props) {
-  const title = idea.title || idea.synthesis?.slice(0, 60) || 'Untitled idea'
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const router = useRouter()
+
+  const title = idea.title || idea.synthesis?.slice(0, 60) || 'Unbenannte Idee'
   const snippet = idea.synthesis
     ? idea.synthesis.slice(0, 120) + (idea.synthesis.length > 120 ? '…' : '')
     : null
 
+  async function handleDelete(e: React.MouseEvent) {
+    e.preventDefault()
+    if (!window.confirm('Idee löschen? Das kann nicht rückgängig gemacht werden.')) return
+    setLoading(true)
+    await fetch(`/api/ideas/${idea.id}`, { method: 'DELETE' })
+    router.refresh()
+  }
+
+  async function handleMarkDone(e: React.MouseEvent) {
+    e.preventDefault()
+    setLoading(true)
+
+    // Download markdown
+    const mdRes = await fetch(`/api/export/${idea.id}`)
+    const { markdown } = await mdRes.json()
+    const blob = new Blob([markdown], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${(idea.title ?? 'idea').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+
+    await fetch(`/api/ideas/${idea.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
+    })
+    router.refresh()
+  }
+
   return (
-    <Link href={`/garden/${idea.id}`} className="block">
-      <div className="bg-garden-surface rounded-2xl border border-garden-border hover:border-garden-muted/40 transition-all p-4 h-full animate-fade-in">
-        {/* Title */}
+    <div className="relative bg-garden-surface rounded-2xl border border-garden-border hover:border-garden-muted/40 transition-all animate-fade-in">
+      {/* ⋮ menu button */}
+      <button
+        onClick={(e) => { e.preventDefault(); setMenuOpen((v) => !v) }}
+        className="absolute top-3 right-3 z-10 p-1.5 rounded-lg text-garden-muted/50 hover:text-garden-muted hover:bg-garden-bg transition-colors"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="1.8"/>
+          <circle cx="12" cy="12" r="1.8"/>
+          <circle cx="12" cy="19" r="1.8"/>
+        </svg>
+      </button>
+
+      {/* Dropdown menu */}
+      {menuOpen && (
+        <>
+          {/* Backdrop to close */}
+          <div
+            className="fixed inset-0 z-20"
+            onClick={(e) => { e.preventDefault(); setMenuOpen(false) }}
+          />
+          <div className="absolute top-9 right-2 z-30 bg-white border border-garden-border rounded-xl shadow-lg overflow-hidden min-w-36 animate-fade-in">
+            <button
+              onClick={handleMarkDone}
+              disabled={loading}
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-garden-seed hover:bg-garden-seed-light transition-colors text-left"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Als fertig markieren
+            </button>
+            <div className="h-px bg-garden-border" />
+            <button
+              onClick={handleDelete}
+              disabled={loading}
+              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors text-left"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+              </svg>
+              Löschen
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Card link */}
+      <Link href={`/garden/${idea.id}`} className="block p-4 pr-10">
         <h3 className="text-sm font-semibold text-garden-text leading-snug mb-2 line-clamp-2">
           {title}
         </h3>
 
-        {/* Synthesis snippet */}
-        {snippet && (
+        {snippet ? (
           <p className="text-xs text-garden-muted leading-relaxed line-clamp-3 mb-3">
             {snippet}
           </p>
+        ) : (
+          <p className="text-xs text-garden-muted/50 italic mb-3">Noch keine Synthese</p>
         )}
 
-        {!snippet && (
-          <p className="text-xs text-garden-muted/50 italic mb-3">No synthesis yet</p>
-        )}
-
-        {/* Footer */}
         <div className="flex items-center justify-between mt-auto pt-2 border-t border-garden-border/50">
           <span className="text-[10px] text-garden-muted">{formatDate(idea.created_at)}</span>
           <span className="text-[10px] text-garden-muted">
-            {inputCount} {inputCount === 1 ? 'note' : 'notes'}
+            {inputCount} {inputCount === 1 ? 'Note' : 'Notes'}
           </span>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   )
 }
