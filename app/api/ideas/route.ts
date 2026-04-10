@@ -41,10 +41,15 @@ export async function POST(req: Request) {
   const sourceContents: string[] = []
 
   if (source_node_ids.length > 0) {
-    const { data: sourceNodes } = await supabase
+    const { data: sourceNodes, error: nodesError } = await supabase
       .from('nodes')
-      .select('content, content_type')
+      .select('id, content, content_type, promoted, user_id')
       .in('id', source_node_ids)
+
+    // Debug: surface exactly what the query returned
+    idea._debug_sourceNodes = sourceNodes
+    idea._debug_nodesError = nodesError?.message ?? null
+    idea._debug_user_id = user.id
 
     for (const n of sourceNodes ?? []) {
       if (n.content) sourceContents.push(n.content)
