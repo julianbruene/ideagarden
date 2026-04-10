@@ -66,14 +66,25 @@ export async function POST(req: Request) {
   if (sourceContents.length > 0) {
     const seedText = sourceContents.join('\n\n---\n\n')
 
-    const { error: inputError } = await supabase.from('inputs').insert({
-      idea_id: idea.id,
-      user_id: user.id,
-      content: seedText,
-      role: 'user',
-      is_note: true,
-    })
-    if (inputError) console.error('Seed input insert failed:', inputError.message)
+    const { data: insertedInput, error: inputError } = await supabase
+      .from('inputs')
+      .insert({
+        idea_id: idea.id,
+        user_id: user.id,
+        content: seedText,
+        role: 'user',
+        is_note: true,
+      })
+      .select()
+      .single()
+
+    if (inputError) {
+      console.error('Seed input insert failed:', inputError.message)
+      // Surface the error in response so client can see it during debugging
+      idea._seedInputError = inputError.message
+    } else {
+      idea._seedInput = insertedInput
+    }
 
     // Generate initial synthesis
     try {

@@ -38,9 +38,9 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved }:
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [notes])
 
-  // Only show real notes (is_note === true), not chat messages
-  // For backwards compat: if is_note is undefined (old data), show user inputs
-  const userNotes = notes.filter((n) => n.role === 'user' && (n.is_note === true || n.is_note === undefined))
+  // Show notes: is_note = true, or is_note is absent/null (backward compat)
+  // Hide only entries explicitly marked is_note = false (those are chat messages)
+  const userNotes = notes.filter((n) => n.role === 'user' && n.is_note !== false)
 
   async function uploadImage(file: File): Promise<string | null> {
     const supabase = createClient()

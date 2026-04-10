@@ -35,11 +35,17 @@ export default function DumpClient({ initialNodes }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ source_node_ids: [id] }),
     })
-    const { idea } = await res.json()
+    const data = await res.json()
+    console.log('[promote] API response:', JSON.stringify(data))
+
+    if (!data.idea?.id) {
+      console.error('[promote] No idea ID returned', data)
+      return
+    }
 
     // Remove node from Dump view after promotion
     setNodes((prev) => prev.filter((n) => n.id !== id))
-    router.push(`/garden/${idea.id}`)
+    router.push(`/garden/${data.idea.id}`)
   }
 
   function toggleSelect(id: string) {
