@@ -10,10 +10,9 @@ export async function POST(_req: Request, { params }: Params) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Fetch the input
   const { data: input, error: fetchErr } = await supabase
     .from('inputs')
-    .select('id, content, image_transcript')
+    .select('id, content')
     .eq('id', id)
     .eq('user_id', user.id)
     .single()
@@ -25,6 +24,24 @@ export async function POST(_req: Request, { params }: Params) {
 
   const imageUrl = input.content.slice(5)
 
+  // Fetch image and convert to base64 so Claude doesn't need external URL access
+  let base64: string
+  let mediaType: 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+  try {
+    const imgRes = await fetch(imageUrl)
+    if (!imgRes.ok) throw new Error(`Image fetch failed: ${imgRes.status}`)
+    const buffer = await imgRes.arrayBuffer()
+    base64 = Buffer.from(buffer).toString('base64')
+    const ct = imgRes.headers.get('content-type') ?? 'image/jpeg'
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
+    mediaType = validTypes.includes(ct)
+      ? (ct as typeof mediaType)
+      : 'image/jpeg'
+  } catch (e) {
+    console.error('Image fetch failed:', e)
+    return NextResponse.json({ error: 'Could not fetch image' }, { status: 502 })
+  }
+
   try {
     const msg = await anthropic.messages.create({
       model: MODEL,
@@ -35,7 +52,7 @@ export async function POST(_req: Request, { params }: Params) {
           content: [
             {
               type: 'image',
-              source: { type: 'url', url: imageUrl },
+              source: { type: 'base64', media_type: mediaType, data: base64 },
             },
             {
               type: 'text',

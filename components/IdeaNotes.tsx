@@ -97,9 +97,13 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
       if (note) {
         setTranscribing((prev) => new Set(prev).add(note.id))
         fetch(`/api/inputs/${note.id}/transcribe`, { method: 'POST' })
-          .then((r) => r.ok ? r.json() : null)
+          .then(async (r) => {
+            const json = await r.json()
+            if (!r.ok) { console.error('Transcribe error:', json); return null }
+            return json
+          })
           .then((data) => { if (data?.input) onNoteUpdated(data.input) })
-          .catch(() => null)
+          .catch((e) => console.error('Transcribe fetch failed:', e))
           .finally(() => setTranscribing((prev) => { const s = new Set(prev); s.delete(note.id); return s }))
       }
     }
