@@ -227,17 +227,23 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
                       <span className="w-2.5 h-2.5 border-2 border-garden-muted/30 border-t-garden-muted rounded-full animate-spin block flex-shrink-0" />
                       <p className="text-xs text-garden-muted/40 italic">Text wird extrahiert…</p>
                     </div>
-                  ) : transcribeError.has(note.id) ? (
-                    <div className="px-3.5 pt-2 pb-1 flex items-center gap-2">
-                      <p className="text-xs text-red-400 italic">Extraktion fehlgeschlagen.</p>
+                  ) : (
+                    <div className="px-3.5 pt-2 pb-1">
                       <button
                         onClick={() => runTranscribe(note.id)}
-                        className="text-xs text-garden-accent underline"
+                        className={`text-xs flex items-center gap-1 transition-colors ${
+                          transcribeError.has(note.id)
+                            ? 'text-red-400 hover:text-red-600'
+                            : 'text-garden-muted/50 hover:text-garden-accent'
+                        }`}
                       >
-                        Nochmal
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                        </svg>
+                        {transcribeError.has(note.id) ? 'Fehlgeschlagen — nochmal' : 'Text extrahieren'}
                       </button>
                     </div>
-                  ) : null}
+                  )}
                 </div>
               ) : (
                 <div className="px-3.5 pt-3 pb-2 pr-9">
