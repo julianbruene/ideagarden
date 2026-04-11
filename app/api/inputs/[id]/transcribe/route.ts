@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { anthropic, MODEL } from '@/lib/anthropic'
 
+export const maxDuration = 30
+
 interface Params { params: Promise<{ id: string }> }
 
 export async function POST(_req: Request, { params }: Params) {

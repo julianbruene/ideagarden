@@ -32,6 +32,7 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
   const [uploading, setUploading] = useState(false)
   const [actionId, setActionId] = useState<string | null>(null)
   const [transcribing, setTranscribing] = useState<Set<string>>(new Set())
+  const [transcribeError, setTranscribeError] = useState<Set<string>>(new Set())
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -87,6 +88,25 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
   }
 
 
+  function runTranscribe(noteId: string) {
+    setTranscribing((prev) => new Set(prev).add(noteId))
+    setTranscribeError((prev) => { const s = new Set(prev); s.delete(noteId); return s })
+    fetch(`/api/inputs/${noteId}/transcribe`, { method: 'POST' })
+      .then(async (r) => {
+        const json = await r.json()
+        if (!r.ok) throw new Error(json?.error ?? `HTTP ${r.status}`)
+        return json
+      })
+      .then((data) => {
+        if (data?.input) onNoteUpdated(data.input)
+      })
+      .catch((e) => {
+        console.error('Transcribe failed:', e.message)
+        setTranscribeError((prev) => new Set(prev).add(noteId))
+      })
+      .finally(() => setTranscribing((prev) => { const s = new Set(prev); s.delete(noteId); return s }))
+  }
+
   async function handleImageFile(file: File) {
     if (!file.type.startsWith('image/')) return
     setUploading(true)
@@ -95,16 +115,7 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
       const note = await saveNote(`[img]${url}`)
       // Kick off transcription in background — update note when done
       if (note) {
-        setTranscribing((prev) => new Set(prev).add(note.id))
-        fetch(`/api/inputs/${note.id}/transcribe`, { method: 'POST' })
-          .then(async (r) => {
-            const json = await r.json()
-            if (!r.ok) { console.error('Transcribe error:', json); return null }
-            return json
-          })
-          .then((data) => { if (data?.input) onNoteUpdated(data.input) })
-          .catch((e) => console.error('Transcribe fetch failed:', e))
-          .finally(() => setTranscribing((prev) => { const s = new Set(prev); s.delete(note.id); return s }))
+        runTranscribe(note.id)
       }
     }
     setUploading(false)
@@ -204,7 +215,7 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
                     className="w-full object-cover max-h-56"
                     unoptimized
                   />
-                  {/* Transcript */}
+                  {/* Transcript / status */}
                   {note.image_transcript ? (
                     <div className="px-3.5 pt-2 pb-1">
                       <p className="text-xs text-garden-muted leading-relaxed whitespace-pre-wrap break-words">
@@ -215,6 +226,16 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
                     <div className="px-3.5 pt-2 pb-1 flex items-center gap-1.5">
                       <span className="w-2.5 h-2.5 border-2 border-garden-muted/30 border-t-garden-muted rounded-full animate-spin block flex-shrink-0" />
                       <p className="text-xs text-garden-muted/40 italic">Text wird extrahiert…</p>
+                    </div>
+                  ) : transcribeError.has(note.id) ? (
+                    <div className="px-3.5 pt-2 pb-1 flex items-center gap-2">
+                      <p className="text-xs text-red-400 italic">Extraktion fehlgeschlagen.</p>
+                      <button
+                        onClick={() => runTranscribe(note.id)}
+                        className="text-xs text-garden-accent underline"
+                      >
+                        Nochmal
+                      </button>
                     </div>
                   ) : null}
                 </div>
