@@ -31,6 +31,7 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
   const [submitting, setSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [actionId, setActionId] = useState<string | null>(null)
+  const [transcribing, setTranscribing] = useState<Set<string>>(new Set())
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
@@ -60,7 +61,7 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
     return data.publicUrl
   }
 
-  async function saveNote(content: string) {
+  async function saveNote(content: string): Promise<Input | null> {
     const res = await fetch(`/api/ideas/${ideaId}/notes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -69,7 +70,9 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
     if (res.ok) {
       const { input } = await res.json()
       onNoteAdded(input)
+      return input
     }
+    return null
   }
 
   async function handleSubmit(e?: React.FormEvent) {
@@ -83,11 +86,23 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
     setSubmitting(false)
   }
 
+
   async function handleImageFile(file: File) {
     if (!file.type.startsWith('image/')) return
     setUploading(true)
     const url = await uploadImage(file)
-    if (url) await saveNote(`[img]${url}`)
+    if (url) {
+      const note = await saveNote(`[img]${url}`)
+      // Kick off transcription in background — update note when done
+      if (note) {
+        setTranscribing((prev) => new Set(prev).add(note.id))
+        fetch(`/api/inputs/${note.id}/transcribe`, { method: 'POST' })
+          .then((r) => r.ok ? r.json() : null)
+          .then((data) => { if (data?.input) onNoteUpdated(data.input) })
+          .catch(() => null)
+          .finally(() => setTranscribing((prev) => { const s = new Set(prev); s.delete(note.id); return s }))
+      }
+    }
     setUploading(false)
   }
 
@@ -176,14 +191,29 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
 
               {/* Content */}
               {isImageNote(note.content) ? (
-                <Image
-                  src={getImageUrl(note.content)}
-                  alt="Note image"
-                  width={400}
-                  height={300}
-                  className="w-full object-cover max-h-56"
-                  unoptimized
-                />
+                <div>
+                  <Image
+                    src={getImageUrl(note.content)}
+                    alt="Note image"
+                    width={400}
+                    height={300}
+                    className="w-full object-cover max-h-56"
+                    unoptimized
+                  />
+                  {/* Transcript */}
+                  {note.image_transcript ? (
+                    <div className="px-3.5 pt-2 pb-1">
+                      <p className="text-xs text-garden-muted leading-relaxed whitespace-pre-wrap break-words">
+                        {note.image_transcript}
+                      </p>
+                    </div>
+                  ) : transcribing.has(note.id) ? (
+                    <div className="px-3.5 pt-2 pb-1 flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 border-2 border-garden-muted/30 border-t-garden-muted rounded-full animate-spin block flex-shrink-0" />
+                      <p className="text-xs text-garden-muted/40 italic">Text wird extrahiert…</p>
+                    </div>
+                  ) : null}
+                </div>
               ) : (
                 <div className="px-3.5 pt-3 pb-2 pr-9">
                   <p className="text-sm text-garden-text leading-relaxed whitespace-pre-wrap break-words">

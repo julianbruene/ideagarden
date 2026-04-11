@@ -17,7 +17,7 @@ export async function POST(req: Request, { params }: Params) {
     supabase.from('ideas').select('title, synthesis').eq('id', id).single(),
     supabase
       .from('inputs')
-      .select('role, content')
+      .select('role, content, is_note, image_transcript')
       .eq('idea_id', id)
       .order('created_at', { ascending: true }),
   ])
@@ -30,9 +30,21 @@ export async function POST(req: Request, { params }: Params) {
     role: 'user',
   })
 
-  // Build messages for Claude — full history + new message
+  // Build text-only history for Claude (images sent as transcript)
+  function inputToText(h: { role: string; content: string; is_note?: boolean; image_transcript?: string | null }) {
+    if (h.content.startsWith('[img]')) {
+      return h.image_transcript?.trim()
+        ? `Screenshot: ${h.image_transcript}`
+        : '[Screenshot ohne Text]'
+    }
+    return h.content
+  }
+
   const messages: { role: 'user' | 'assistant'; content: string }[] = [
-    ...(history ?? []).map((h) => ({ role: h.role as 'user' | 'assistant', content: h.content })),
+    ...(history ?? []).map((h) => ({
+      role: h.role as 'user' | 'assistant',
+      content: inputToText(h),
+    })),
     { role: 'user', content: message },
   ]
 

@@ -31,6 +31,7 @@ export interface Input {
   role: InputRole
   is_note?: boolean
   starred?: boolean
+  image_transcript?: string | null
   created_at: string
 }
 
