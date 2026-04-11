@@ -227,6 +227,7 @@ export default function DumpClient({ initialNodes }: Props) {
               onDelete={() => handleDelete(node.id)}
               onPromote={() => handlePromote(node.id)}
               onHeart={() => toggleHeart(node.id)}
+              onNodeUpdated={(updated) => setNodes((prev) => prev.map((n) => n.id === updated.id ? updated : n))}
             />
           ))}
         </div>

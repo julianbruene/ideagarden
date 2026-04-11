@@ -10,6 +10,7 @@ interface Props {
   onSelect?: () => void
   onDelete?: () => void
   onPromote?: () => void
+  onNodeUpdated?: (node: IdeaNode) => void
   selectionMode?: boolean
   hearted?: boolean
   onHeart?: () => void
@@ -33,9 +34,25 @@ const TYPE_ICON: Record<string, string> = {
   text: '',
 }
 
-export default function NodeCard({ node, selected, onSelect, onDelete, onPromote, selectionMode, hearted, onHeart }: Props) {
+export default function NodeCard({ node, selected, onSelect, onDelete, onPromote, onNodeUpdated, selectionMode, hearted, onHeart }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [promoting, setPromoting] = useState(false)
+  const [transcribing, setTranscribing] = useState(false)
+  const [transcribeError, setTranscribeError] = useState(false)
+
+  function runTranscribe() {
+    setTranscribing(true)
+    setTranscribeError(false)
+    fetch(`/api/nodes/${node.id}/transcribe`, { method: 'POST' })
+      .then(async (r) => {
+        const json = await r.json()
+        if (!r.ok) throw new Error(json?.error ?? `HTTP ${r.status}`)
+        return json
+      })
+      .then((data) => { if (data?.node) onNodeUpdated?.(data.node) })
+      .catch((e) => { console.error('Transcribe failed:', e.message); setTranscribeError(true) })
+      .finally(() => setTranscribing(false))
+  }
 
   const preview = node.content ? node.content.slice(0, 200) : ''
   const isLong = (node.content?.length ?? 0) > 200
@@ -88,15 +105,42 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
 
         {/* Image */}
         {node.content_type === 'image' && node.image_url && (
-          <div className={`mb-3 rounded-xl overflow-hidden bg-garden-bg ${expanded ? '' : 'max-h-40'}`}>
-            <Image
-              src={node.image_url}
-              alt="Node image"
-              width={400}
-              height={300}
-              className="w-full object-cover"
-              unoptimized
-            />
+          <div className="mb-2">
+            <div className={`rounded-xl overflow-hidden bg-garden-bg ${expanded ? '' : 'max-h-40'}`}>
+              <Image
+                src={node.image_url}
+                alt="Node image"
+                width={400}
+                height={300}
+                className="w-full object-cover"
+                unoptimized
+              />
+            </div>
+            {/* Transcript */}
+            {node.image_transcript ? (
+              <p className="mt-1.5 text-xs text-garden-muted leading-relaxed whitespace-pre-wrap break-words">
+                {node.image_transcript}
+              </p>
+            ) : transcribing ? (
+              <div className="mt-1.5 flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 border-2 border-garden-muted/30 border-t-garden-muted rounded-full animate-spin block flex-shrink-0" />
+                <p className="text-xs text-garden-muted/40 italic">Text wird extrahiert…</p>
+              </div>
+            ) : (
+              <button
+                onClick={(e) => { e.stopPropagation(); runTranscribe() }}
+                className={`mt-1.5 text-xs flex items-center gap-1 transition-colors ${
+                  transcribeError
+                    ? 'text-red-400 hover:text-red-600'
+                    : 'text-garden-muted/50 hover:text-garden-accent'
+                }`}
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                </svg>
+                {transcribeError ? 'Fehlgeschlagen — nochmal' : 'Text extrahieren'}
+              </button>
+            )}
           </div>
         )}
 

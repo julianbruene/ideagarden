@@ -8,6 +8,7 @@ export interface IdeaNode {
   content: string | null
   content_type: NodeContentType
   image_url: string | null
+  image_transcript?: string | null
   promoted: boolean
   created_at: string
 }
