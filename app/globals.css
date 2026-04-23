@@ -9,8 +9,8 @@
   }
 
   body {
-    background-color: #F6F1E8;
-    color: #2A2620;
+    background-color: #EEEAE0;
+    color: #1C1B17;
     font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -21,8 +21,8 @@
   }
 
   ::selection {
-    background-color: #E8EFE4;
-    color: #2A2620;
+    background-color: #E5EBDF;
+    color: #1C1B17;
   }
 
   /* Fraunces tuning — slightly softer than default */

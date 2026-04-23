@@ -10,31 +10,33 @@ const config: Config = {
     extend: {
       colors: {
         garden: {
-          // Warm paper palette
-          bg: '#F6F1E8',            // page background — warm off-white
-          surface: '#FDFBF6',       // cards, elevated surfaces
-          border: '#E4DDCF',        // hairline warm gray-brown
-          text: '#2A2620',          // body text — warm near-black
-          muted: '#8B8070',         // secondary text
-          'muted-soft': '#B5AC9E',  // very muted — dates, hints
+          // Claude-style palette — neutral cream, desaturated, not buttery
+          bg: '#EEEAE0',            // main bg — neutral warm off-white (was yellowish #F6F1E8)
+          surface: '#FDFCF9',       // cards
+          border: '#DDD8CB',        // hairline warm neutral gray
+          text: '#1C1B17',          // crisper near-black
+          muted: '#6F6B62',         // secondary text, more neutral gray
+          'muted-soft': '#A19C92',  // dates, hints — soft stone gray
 
           // Accent — forest green (Garden, primary action)
           accent: '#3F6B42',
-          'accent-light': '#E8EFE4',
+          'accent-light': '#E5EBDF',
           'accent-dark': '#2F5332',
 
-          // Seed — warm terracotta (Projects, done, maturation)
-          seed: '#A8522A',
-          'seed-light': '#F4E6DD',
+          // Seed — Anthropic-style terracotta/coral (Projects, maturation)
+          seed: '#CC785C',
+          'seed-light': '#F5E4DC',
 
-          // Accents kept for continuity
-          star: '#C79329',          // ochre for starred notes
-          'star-light': '#FAF0D9',
-          heart: '#B84A3E',         // rust-red for heart/idea-sex preselect
-          'heart-light': '#F9E3DF',
+          // Ochre for stars, dialed back to muted gold
+          star: '#B88538',
+          'star-light': '#F5EBD4',
 
-          danger: '#B04848',
-          'danger-light': '#F5E0DE',
+          // Rust-red for heart/idea-sex
+          heart: '#B84A3E',
+          'heart-light': '#F2DBD6',
+
+          danger: '#A54848',
+          'danger-light': '#F0DBD8',
         },
       },
       fontFamily: {
