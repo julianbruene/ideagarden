@@ -33,7 +33,7 @@ export default async function GardenPage() {
   return (
     <div className="min-h-screen bg-garden-bg pb-24">
       <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-md border-b border-garden-border/60 pt-safe">
-        <div className="max-w-lg mx-auto px-5 py-4 flex items-end justify-between">
+        <div className="max-w-lg md:max-w-3xl mx-auto px-5 py-4 flex items-end justify-between">
           <div>
             <h1 className="font-display text-2xl text-garden-text leading-none" style={{ fontWeight: 500 }}>Garden</h1>
             <p className="text-[11px] text-garden-muted-soft mt-1 tracking-wide">Was gerade wächst.</p>
@@ -47,7 +47,7 @@ export default async function GardenPage() {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-5 pt-5">
+      <main className="max-w-lg md:max-w-3xl mx-auto px-5 pt-5">
         {(ideas ?? []).length === 0 ? (
           <div className="text-center py-20">
             <div className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</div>
@@ -63,7 +63,7 @@ export default async function GardenPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {(ideas ?? []).map((idea) => (
               <IdeaCard
                 key={idea.id}

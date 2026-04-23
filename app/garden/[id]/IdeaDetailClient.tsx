@@ -22,6 +22,7 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
   const [titleDraft, setTitleDraft] = useState(idea.title ?? '')
   const [completing, setCompleting] = useState(false)
   const [promoting, setPromoting] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<ActiveTab>('notes')
   const [synthLoading, setSynthLoading] = useState(false)
   const [synthOpen, setSynthOpen] = useState(!!idea.synthesis)
@@ -50,6 +51,21 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
       setSynthOpen(true)
     }
     setSynthLoading(false)
+  }
+
+  async function handleDelete() {
+    if (!window.confirm('Idee löschen? Das kann nicht rückgängig gemacht werden.')) return
+    try {
+      const res = await fetch(`/api/ideas/${idea.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(`Löschen fehlgeschlagen: ${data.error ?? res.status}`)
+        return
+      }
+      router.push('/garden')
+    } catch (err) {
+      alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
+    }
   }
 
   async function handlePromoteToProject() {
@@ -127,7 +143,7 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
     <div className="flex flex-col bg-garden-bg" style={{ height: '100dvh', paddingBottom: '56px' }}>
 
       {/* ── Header ── */}
-      <header className="flex-shrink-0 bg-garden-surface border-b border-garden-border px-4 py-3 flex items-center gap-3">
+      <header className="flex-shrink-0 bg-garden-surface border-b border-garden-border px-4 md:px-6 py-3 md:py-3.5 flex items-center gap-3">
         <Link
           href="/garden"
           className="p-1.5 -ml-1.5 rounded-lg hover:bg-garden-border/40 text-garden-muted transition-colors"
@@ -149,14 +165,15 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
                 if (e.key === 'Enter') saveTitle()
                 if (e.key === 'Escape') { setTitleDraft(idea.title ?? ''); setEditingTitle(false) }
               }}
-              className="w-full bg-transparent text-sm font-semibold text-garden-text outline-none border-b border-garden-accent"
+              className="w-full bg-transparent font-display text-base md:text-xl text-garden-text outline-none border-b border-garden-accent"
               placeholder="Titel hinzufügen…"
               autoFocus
             />
           ) : (
             <button
               onClick={() => { setEditingTitle(true); setTimeout(() => titleRef.current?.select(), 10) }}
-              className="text-sm font-semibold text-garden-text hover:text-garden-accent transition-colors truncate block max-w-full text-left"
+              className="font-display text-base md:text-xl text-garden-text hover:text-garden-accent transition-colors truncate block max-w-full text-left"
+              style={{ fontWeight: 500 }}
             >
               {idea.title || 'Unbenannte Idee'}
             </button>
@@ -166,19 +183,55 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
         <button
           onClick={handlePromoteToProject}
           disabled={promoting}
-          className="text-xs px-2.5 py-1.5 rounded-xl bg-garden-accent-light text-garden-accent border border-garden-accent/20 font-medium hover:bg-garden-accent/10 transition-colors disabled:opacity-40 whitespace-nowrap"
+          className="text-xs px-2.5 py-1.5 rounded-lg bg-garden-accent-light text-garden-accent border border-garden-accent/20 font-medium hover:bg-garden-accent/10 transition-colors disabled:opacity-40 whitespace-nowrap"
           title="In ein Projekt verwandeln"
         >
           {promoting ? '…' : '→ Projekt'}
         </button>
 
-        <button
-          onClick={handleMarkDone}
-          disabled={completing || idea.status === 'done'}
-          className="text-xs px-3 py-1.5 rounded-xl bg-garden-seed-light text-garden-seed border border-garden-seed/30 font-medium hover:bg-garden-seed/10 transition-colors disabled:opacity-40 whitespace-nowrap"
-        >
-          {completing ? '…' : 'Fertig'}
-        </button>
+        {/* ⋮ menu — destructive/archival actions tucked away */}
+        <div className="relative">
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            className="p-1.5 rounded-lg text-garden-muted/60 hover:text-garden-text hover:bg-garden-bg transition-colors"
+            title="Weitere Aktionen"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="12" cy="5" r="1.8"/>
+              <circle cx="12" cy="12" r="1.8"/>
+              <circle cx="12" cy="19" r="1.8"/>
+            </svg>
+          </button>
+          {menuOpen && (
+            <>
+              <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(false)} />
+              <div className="absolute top-full right-0 mt-1 z-30 bg-garden-surface border border-garden-border rounded-xl shadow-paper-lg overflow-hidden min-w-52 animate-fade-in">
+                <button
+                  onClick={() => { setMenuOpen(false); handleMarkDone() }}
+                  disabled={completing || idea.status === 'done'}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-seed hover:bg-garden-seed-light transition-colors text-left disabled:opacity-40"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                  </svg>
+                  Als fertig markieren
+                </button>
+                <div className="h-px bg-garden-border/60" />
+                <button
+                  onClick={() => { setMenuOpen(false); handleDelete() }}
+                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-danger hover:bg-garden-danger-light transition-colors text-left"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                    <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+                  </svg>
+                  Idee löschen
+                </button>
+              </div>
+            </>
+          )}
+        </div>
       </header>
 
       {/* ── Mobile tabs ── */}
@@ -199,7 +252,7 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
       </div>
 
       {/* ── Main panels — flex-1 with min-h-0 is the key for inner scroll ── */}
-      <div className="flex-1 flex min-h-0 overflow-hidden">
+      <div className="flex-1 flex min-h-0 overflow-hidden max-w-7xl w-full mx-auto">
 
         {/* Left: Notes */}
         <div className={`flex flex-col w-full md:w-1/2 md:border-r border-garden-border min-h-0 ${

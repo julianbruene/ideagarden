@@ -138,31 +138,24 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col" style={{ minHeight: '100dvh' }}>
-      {/* Top bar — subtle, becomes fully opaque on hover */}
-      <div className="flex-shrink-0 flex items-center justify-between px-4 py-2.5 text-garden-muted/50 hover:text-garden-muted transition-colors group">
+      {/* Top bar — only back arrow. No destructive actions here. */}
+      <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-3">
         <Link
           href={`/projects/${initialProject.id}`}
-          className="p-1.5 -ml-1.5 rounded-lg hover:bg-garden-bg transition-colors"
-          title="Zurück zur Projekt-Übersicht"
+          className="p-1.5 -ml-1.5 rounded-lg text-garden-muted/50 hover:text-garden-muted hover:bg-garden-bg transition-colors flex items-center gap-1.5"
+          title="Zurück zum Projekt"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
+          <span className="text-xs hidden md:inline">Zurück</span>
         </Link>
-
-        <button
-          onClick={handleDone}
-          disabled={completing}
-          className="text-xs px-3 py-1.5 rounded-xl border border-garden-border/60 text-garden-muted hover:text-garden-seed hover:border-garden-seed/40 transition-colors disabled:opacity-40"
-        >
-          {completing ? '…' : 'Fertig'}
-        </button>
       </div>
 
-      {/* Main writing surface — centered, max-width for readability */}
+      {/* Main writing surface — centered, wider on desktop for comfortable prose */}
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto px-6 md:px-10 py-6 md:py-10">
+        <div className="max-w-3xl mx-auto px-6 md:px-12 lg:px-16 py-6 md:py-12 lg:py-16">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -397,6 +390,20 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
                   </ul>
                 )}
               </div>
+            </div>
+
+            {/* Footer — finish project action, tucked away */}
+            <div className="flex-shrink-0 border-t border-garden-border/60 px-4 py-3 bg-garden-bg/40">
+              <button
+                onClick={handleDone}
+                disabled={completing}
+                className="w-full text-xs text-garden-muted hover:text-garden-seed transition-colors flex items-center justify-center gap-1.5 py-2 rounded-lg hover:bg-garden-seed-light disabled:opacity-40"
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                {completing ? 'Wird abgeschlossen…' : 'Projekt abschließen & exportieren'}
+              </button>
             </div>
           </aside>
         </>

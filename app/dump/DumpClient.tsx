@@ -126,7 +126,7 @@ export default function DumpClient({ initialNodes }: Props) {
     <div className="min-h-screen bg-garden-bg pb-24">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-md border-b border-garden-border/60 pt-safe">
-        <div className="max-w-lg mx-auto px-5 py-4 flex items-end justify-between">
+        <div className="max-w-lg md:max-w-2xl mx-auto px-5 py-4 flex items-end justify-between">
           <div>
             <h1 className="font-display text-2xl text-garden-text leading-none" style={{ fontWeight: 500 }}>Dump</h1>
             <p className="text-[11px] text-garden-muted-soft mt-1 tracking-wide">Rohe Gedanken, ungefiltert.</p>
@@ -182,7 +182,7 @@ export default function DumpClient({ initialNodes }: Props) {
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 pt-4 space-y-3">
+      <main className="max-w-lg md:max-w-2xl mx-auto px-4 pt-4 space-y-3">
         {/* Input */}
         {!selectionMode && (
           <DumpInput onNodeCreated={handleNodeCreated} />

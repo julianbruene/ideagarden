@@ -69,7 +69,7 @@ export default function NavBar() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-garden-surface/95 backdrop-blur-md border-t border-garden-border/60 pb-safe">
-      <div className="flex items-stretch justify-around max-w-lg mx-auto px-2 h-14">
+      <div className="flex items-stretch justify-around max-w-lg md:max-w-xl mx-auto px-2 h-14">
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname.startsWith(href)
           return (
