@@ -6,34 +6,33 @@ import Link from 'next/link'
 import NavBar from '@/components/NavBar'
 import IdeaNotes from '@/components/IdeaNotes'
 import IdeaChat from '@/components/IdeaChat'
-import type { Idea, Input } from '@/lib/types'
+import type { Project, Input } from '@/lib/types'
 
 interface Props {
-  idea: Idea
+  project: Project
   initialInputs: Input[]
 }
 
 type ActiveTab = 'notes' | 'chat'
 
-export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: Props) {
-  const [idea, setIdea] = useState<Idea>(initialIdea)
+export default function ProjectDetailClient({ project: initialProject, initialInputs }: Props) {
+  const [project, setProject] = useState<Project>(initialProject)
   const [inputs, setInputs] = useState<Input[]>(initialInputs)
   const [editingTitle, setEditingTitle] = useState(false)
-  const [titleDraft, setTitleDraft] = useState(idea.title ?? '')
+  const [titleDraft, setTitleDraft] = useState(project.title ?? '')
   const [completing, setCompleting] = useState(false)
-  const [promoting, setPromoting] = useState(false)
   const [activeTab, setActiveTab] = useState<ActiveTab>('notes')
   const [synthLoading, setSynthLoading] = useState(false)
-  const [synthOpen, setSynthOpen] = useState(!!idea.synthesis)
+  const [synthOpen, setSynthOpen] = useState(!!project.synthesis)
   const titleRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
   async function saveTitle() {
     setEditingTitle(false)
     const trimmed = titleDraft.trim() || null
-    if (trimmed === idea.title) return
-    setIdea((i) => ({ ...i, title: trimmed }))
-    await fetch(`/api/ideas/${idea.id}`, {
+    if (trimmed === project.title) return
+    setProject((p) => ({ ...p, title: trimmed }))
+    await fetch(`/api/projects/${project.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: trimmed }),
@@ -43,54 +42,34 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
   async function handleGenerateSynthesis() {
     if (synthLoading) return
     setSynthLoading(true)
-    const res = await fetch(`/api/ideas/${idea.id}/synthesis`, { method: 'POST' })
+    const res = await fetch(`/api/projects/${project.id}/synthesis`, { method: 'POST' })
     const { synthesis } = await res.json()
     if (synthesis) {
-      setIdea((i) => ({ ...i, synthesis }))
+      setProject((p) => ({ ...p, synthesis }))
       setSynthOpen(true)
     }
     setSynthLoading(false)
   }
 
-  async function handlePromoteToProject() {
-    if (promoting) return
-    const confirmed = window.confirm(
-      'Diese Idee in ein Projekt verwandeln? Notes und Synthese werden übernommen, die Idee bleibt bestehen.'
-    )
-    if (!confirmed) return
-    setPromoting(true)
-    const res = await fetch('/api/projects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source_idea_ids: [idea.id], title: idea.title ?? null }),
-    })
-    const data = await res.json()
-    if (data.project?.id) {
-      router.push(`/projects/${data.project.id}`)
-    } else {
-      setPromoting(false)
-    }
-  }
-
   async function handleMarkDone() {
     if (completing) return
     const confirmed = window.confirm(
-      'Idee als fertig markieren? Sie wird ins Archiv verschoben und als Markdown heruntergeladen.'
+      'Projekt als fertig markieren? Es wird ins Archiv verschoben und als Markdown heruntergeladen.'
     )
     if (!confirmed) return
     setCompleting(true)
 
-    const mdRes = await fetch(`/api/export/${idea.id}`)
+    const mdRes = await fetch(`/api/projects/${project.id}/export`)
     const { markdown } = await mdRes.json()
     const blob = new Blob([markdown], { type: 'text/markdown' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${(idea.title ?? 'idea').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
+    a.download = `${(project.title ?? 'projekt').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
     a.click()
     URL.revokeObjectURL(url)
 
-    await fetch(`/api/ideas/${idea.id}`, {
+    await fetch(`/api/projects/${project.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
@@ -99,13 +78,12 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
   }
 
   return (
-    // Use flex column, height fills viewport minus the fixed NavBar (56px = pb-14)
     <div className="flex flex-col bg-garden-bg" style={{ height: '100dvh', paddingBottom: '56px' }}>
 
       {/* ── Header ── */}
       <header className="flex-shrink-0 bg-garden-surface border-b border-garden-border px-4 py-3 flex items-center gap-3">
         <Link
-          href="/garden"
+          href="/projects"
           className="p-1.5 -ml-1.5 rounded-lg hover:bg-garden-border/40 text-garden-muted transition-colors"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -115,6 +93,11 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
         </Link>
 
         <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 mb-0.5">
+            <span className="text-[9px] uppercase tracking-widest text-garden-seed font-semibold">
+              Projekt
+            </span>
+          </div>
           {editingTitle ? (
             <input
               ref={titleRef}
@@ -123,7 +106,7 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
               onBlur={saveTitle}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') saveTitle()
-                if (e.key === 'Escape') { setTitleDraft(idea.title ?? ''); setEditingTitle(false) }
+                if (e.key === 'Escape') { setTitleDraft(project.title ?? ''); setEditingTitle(false) }
               }}
               className="w-full bg-transparent text-sm font-semibold text-garden-text outline-none border-b border-garden-accent"
               placeholder="Titel hinzufügen…"
@@ -134,23 +117,14 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
               onClick={() => { setEditingTitle(true); setTimeout(() => titleRef.current?.select(), 10) }}
               className="text-sm font-semibold text-garden-text hover:text-garden-accent transition-colors truncate block max-w-full text-left"
             >
-              {idea.title || 'Unbenannte Idee'}
+              {project.title || 'Unbenanntes Projekt'}
             </button>
           )}
         </div>
 
         <button
-          onClick={handlePromoteToProject}
-          disabled={promoting}
-          className="text-xs px-2.5 py-1.5 rounded-xl bg-garden-accent-light text-garden-accent border border-garden-accent/20 font-medium hover:bg-garden-accent/10 transition-colors disabled:opacity-40 whitespace-nowrap"
-          title="In ein Projekt verwandeln"
-        >
-          {promoting ? '…' : '→ Projekt'}
-        </button>
-
-        <button
           onClick={handleMarkDone}
-          disabled={completing || idea.status === 'done'}
+          disabled={completing || project.status === 'done'}
           className="text-xs px-3 py-1.5 rounded-xl bg-garden-seed-light text-garden-seed border border-garden-seed/30 font-medium hover:bg-garden-seed/10 transition-colors disabled:opacity-40 whitespace-nowrap"
         >
           {completing ? '…' : 'Fertig'}
@@ -174,7 +148,7 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
         ))}
       </div>
 
-      {/* ── Main panels — flex-1 with min-h-0 is the key for inner scroll ── */}
+      {/* ── Main panels ── */}
       <div className="flex-1 flex min-h-0 overflow-hidden">
 
         {/* Left: Notes */}
@@ -185,7 +159,8 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
             <p className="text-[10px] uppercase tracking-widest text-garden-muted font-medium">Notes</p>
           </div>
           <IdeaNotes
-            ideaId={idea.id}
+            ideaId={project.id}
+            notesEndpoint={`/api/projects/${project.id}/notes`}
             notes={inputs}
             onNoteAdded={(note) => setInputs((prev) => [...prev, note])}
             onNoteRemoved={(id) => setInputs((prev) => prev.filter((i) => i.id !== id))}
@@ -201,16 +176,16 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
             <p className="text-[10px] uppercase tracking-widest text-garden-muted font-medium">KI-Chat</p>
           </div>
           <IdeaChat
-            ideaId={idea.id}
+            ideaId={project.id}
+            chatEndpoint={`/api/projects/${project.id}/chat`}
             allInputs={inputs}
             onMessageAdded={setInputs}
           />
         </div>
       </div>
 
-      {/* ── Synthesis — collapsible bar at bottom ── */}
+      {/* ── Synthesis bar ── */}
       <div className="flex-shrink-0 border-t border-garden-border bg-garden-surface">
-        {/* Header row — always visible */}
         <div className="flex items-center gap-3 px-4 py-2.5">
           <button
             onClick={handleGenerateSynthesis}
@@ -228,16 +203,14 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
             Synthese
           </button>
 
-          {/* Toggle expand, only if there's a synthesis */}
-          {idea.synthesis && (
+          {project.synthesis && (
             <button
               onClick={() => setSynthOpen((v) => !v)}
               className="flex items-center gap-1.5 flex-1 min-w-0 text-left group"
             >
-              {/* Preview when collapsed */}
               {!synthOpen && (
                 <p className="text-xs text-garden-muted truncate flex-1">
-                  {idea.synthesis}
+                  {project.synthesis}
                 </p>
               )}
               {synthOpen && (
@@ -253,18 +226,17 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
             </button>
           )}
 
-          {!idea.synthesis && (
+          {!project.synthesis && (
             <p className="text-xs text-garden-muted/50 italic">
               Noch keine Synthese.
             </p>
           )}
         </div>
 
-        {/* Expanded synthesis text */}
-        {synthOpen && idea.synthesis && (
+        {synthOpen && project.synthesis && (
           <div className="px-4 pb-3">
             <p className="text-sm text-garden-text leading-relaxed bg-garden-accent-light rounded-xl px-4 py-3">
-              {idea.synthesis}
+              {project.synthesis}
             </p>
           </div>
         )}

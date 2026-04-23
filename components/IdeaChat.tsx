@@ -4,12 +4,14 @@ import { useState, useRef, useEffect } from 'react'
 import type { Input } from '@/lib/types'
 
 interface Props {
-  ideaId: string
+  ideaId: string  // container id — idea_id OR project_id
+  chatEndpoint?: string  // defaults to /api/ideas/[id]/chat
   allInputs: Input[]
   onMessageAdded: (inputs: Input[]) => void
 }
 
-export default function IdeaChat({ ideaId, allInputs, onMessageAdded }: Props) {
+export default function IdeaChat({ ideaId, chatEndpoint, allInputs, onMessageAdded }: Props) {
+  const endpoint = chatEndpoint ?? `/api/ideas/${ideaId}/chat`
   const [message, setMessage] = useState('')
   const [streaming, setStreaming] = useState(false)
   const [streamedText, setStreamedText] = useState('')
@@ -50,7 +52,7 @@ export default function IdeaChat({ ideaId, allInputs, onMessageAdded }: Props) {
     setStreamedText('')
 
     try {
-      const res = await fetch(`/api/ideas/${ideaId}/chat`, {
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: trimmed }),

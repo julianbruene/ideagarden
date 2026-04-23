@@ -6,7 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import type { Input } from '@/lib/types'
 
 interface Props {
-  ideaId: string
+  ideaId: string  // container id — idea_id OR project_id
+  notesEndpoint?: string  // defaults to /api/ideas/[id]/notes
   notes: Input[]
   onNoteAdded: (note: Input) => void
   onNoteRemoved: (id: string) => void
@@ -26,7 +27,8 @@ function formatDate(iso: string) {
 function isImageNote(content: string) { return content.startsWith('[img]') }
 function getImageUrl(content: string) { return content.slice(5) }
 
-export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, onNoteUpdated }: Props) {
+export default function IdeaNotes({ ideaId, notesEndpoint, notes, onNoteAdded, onNoteRemoved, onNoteUpdated }: Props) {
+  const saveEndpoint = notesEndpoint ?? `/api/ideas/${ideaId}/notes`
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -63,7 +65,7 @@ export default function IdeaNotes({ ideaId, notes, onNoteAdded, onNoteRemoved, o
   }
 
   async function saveNote(content: string): Promise<Input | null> {
-    const res = await fetch(`/api/ideas/${ideaId}/notes`, {
+    const res = await fetch(saveEndpoint, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content }),

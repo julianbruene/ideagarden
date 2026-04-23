@@ -1,33 +1,44 @@
 'use client'
 
 import { useState } from 'react'
-import type { Idea } from '@/lib/types'
+
+export interface DoneItem {
+  id: string
+  kind: 'idea' | 'project'
+  title: string | null
+  synthesis: string | null
+  completed_at: string | null
+}
 
 interface Props {
-  ideas: Idea[]
+  items: DoneItem[]
 }
 
 function formatDate(iso: string | null) {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString(undefined, {
+  return new Date(iso).toLocaleDateString('de-DE', {
     year: 'numeric', month: 'short', day: 'numeric',
   })
 }
 
-export default function DoneClient({ ideas }: Props) {
+export default function DoneClient({ items }: Props) {
   const [downloading, setDownloading] = useState<string | null>(null)
 
-  async function downloadMarkdown(idea: Idea) {
+  async function downloadMarkdown(item: DoneItem) {
     if (downloading) return
-    setDownloading(idea.id)
+    setDownloading(item.id)
     try {
-      const res = await fetch(`/api/export/${idea.id}`)
+      const endpoint = item.kind === 'project'
+        ? `/api/projects/${item.id}/export`
+        : `/api/export/${item.id}`
+      const res = await fetch(endpoint)
       const { markdown } = await res.json()
       const blob = new Blob([markdown], { type: 'text/markdown' })
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `${(idea.title ?? 'idea').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
+      const prefix = item.kind === 'project' ? 'projekt' : 'idee'
+      a.download = `${(item.title ?? prefix).replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
       a.click()
       URL.revokeObjectURL(url)
     } finally {
@@ -37,33 +48,42 @@ export default function DoneClient({ ideas }: Props) {
 
   return (
     <div className="space-y-3">
-      {ideas.map((idea) => (
+      {items.map((item) => (
         <div
-          key={idea.id}
+          key={`${item.kind}-${item.id}`}
           className="bg-garden-surface rounded-2xl border border-garden-border p-4 animate-fade-in"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className={`text-[9px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full ${
+                  item.kind === 'project'
+                    ? 'text-garden-seed bg-garden-seed-light'
+                    : 'text-garden-accent bg-garden-accent-light'
+                }`}>
+                  {item.kind === 'project' ? 'Projekt' : 'Idee'}
+                </span>
+              </div>
               <h3 className="text-sm font-semibold text-garden-text truncate">
-                {idea.title || 'Untitled idea'}
+                {item.title || (item.kind === 'project' ? 'Unbenanntes Projekt' : 'Unbenannte Idee')}
               </h3>
-              {idea.synthesis && (
+              {item.synthesis && (
                 <p className="text-xs text-garden-muted mt-1 leading-relaxed line-clamp-2">
-                  {idea.synthesis}
+                  {item.synthesis}
                 </p>
               )}
               <p className="text-[10px] text-garden-muted/60 mt-2">
-                Completed {formatDate(idea.completed_at)}
+                Abgeschlossen {formatDate(item.completed_at)}
               </p>
             </div>
 
             <button
-              onClick={() => downloadMarkdown(idea)}
-              disabled={downloading === idea.id}
+              onClick={() => downloadMarkdown(item)}
+              disabled={downloading === item.id}
               className="flex-shrink-0 p-2 rounded-xl border border-garden-border bg-garden-bg hover:bg-white text-garden-muted hover:text-garden-text transition-all disabled:opacity-40"
-              title="Download as Markdown"
+              title="Als Markdown herunterladen"
             >
-              {downloading === idea.id ? (
+              {downloading === item.id ? (
                 <span className="w-4 h-4 border-2 border-garden-muted border-t-transparent rounded-full animate-spin block" />
               ) : (
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"

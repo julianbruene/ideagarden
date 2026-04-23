@@ -1,6 +1,8 @@
 export type NodeContentType = 'text' | 'voice' | 'image' | 'quote'
 export type IdeaStatus = 'growing' | 'done'
+export type ProjectStatus = 'active' | 'done'
 export type InputRole = 'user' | 'assistant'
+export type ContainerType = 'idea' | 'project'
 
 export interface IdeaNode {
   id: string
@@ -26,14 +28,29 @@ export interface Idea {
 
 export interface Input {
   id: string
-  idea_id: string
+  idea_id: string | null
+  project_id?: string | null
   user_id: string
   content: string
   role: InputRole
   is_note?: boolean
   starred?: boolean
   image_transcript?: string | null
+  mirror_source_id?: string | null
   created_at: string
+}
+
+export interface Project {
+  id: string
+  user_id: string
+  title: string | null
+  outline: string | null
+  writing_content: string | null
+  synthesis: string | null
+  source_idea_ids: string[]
+  status: ProjectStatus
+  created_at: string
+  completed_at: string | null
 }
 
 // Shape returned from /api/ideas/[id] with inputs joined

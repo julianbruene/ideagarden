@@ -5,9 +5,10 @@ import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
 const navItems = [
-  { href: '/dump',   label: 'Dump',   icon: DumpIcon },
-  { href: '/garden', label: 'Garden', icon: GardenIcon },
-  { href: '/done',   label: 'Done',   icon: DoneIcon },
+  { href: '/dump',     label: 'Dump',     icon: DumpIcon },
+  { href: '/garden',   label: 'Garden',   icon: GardenIcon },
+  { href: '/projects', label: 'Projects', icon: ProjectsIcon },
+  { href: '/done',     label: 'Done',     icon: DoneIcon },
 ]
 
 function DumpIcon({ active }: { active: boolean }) {
@@ -28,6 +29,17 @@ function GardenIcon({ active }: { active: boolean }) {
       <path d="M12 12C12 8 8 4 4 4c0 4 2.5 7.5 8 8z" />
       <path d="M12 12c0-4 4-8 8-8-0 4-2.5 7.5-8 8z" />
       <path d="M5 22h14" />
+    </svg>
+  )
+}
+
+function ProjectsIcon({ active }: { active: boolean }) {
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth={active ? 2 : 1.5} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 4h16v4H4z" />
+      <path d="M4 12h16v4H4z" />
+      <path d="M4 20h10" />
     </svg>
   )
 }
@@ -61,7 +73,7 @@ export default function NavBar() {
             <Link
               key={href}
               href={href}
-              className={`flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl transition-colors ${
+              className={`flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl transition-colors ${
                 active
                   ? 'text-garden-accent'
                   : 'text-garden-muted hover:text-garden-text'
@@ -78,7 +90,7 @@ export default function NavBar() {
         {/* Sign out */}
         <button
           onClick={handleSignOut}
-          className="flex flex-col items-center gap-0.5 px-4 py-1.5 rounded-xl text-garden-muted hover:text-garden-text transition-colors"
+          className="flex flex-col items-center gap-0.5 px-2 py-1.5 rounded-xl text-garden-muted hover:text-garden-text transition-colors"
           title="Sign out"
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
