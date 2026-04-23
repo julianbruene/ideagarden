@@ -125,18 +125,21 @@ export default function DumpClient({ initialNodes }: Props) {
   return (
     <div className="min-h-screen bg-garden-bg pb-24">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-sm border-b border-garden-border/50 pt-safe">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-base font-semibold text-garden-text">Dump</h1>
+      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-md border-b border-garden-border/60 pt-safe">
+        <div className="max-w-lg mx-auto px-5 py-4 flex items-end justify-between">
+          <div>
+            <h1 className="font-display text-2xl text-garden-text leading-none" style={{ fontWeight: 500 }}>Dump</h1>
+            <p className="text-[11px] text-garden-muted-soft mt-1 tracking-wide">Rohe Gedanken, ungefiltert.</p>
+          </div>
           <div className="flex items-center gap-2">
             {!selectionMode ? (
               <>
                 {canIdeaSex && (
                   <button
                     onClick={handleIdeaSexClick}
-                    className={`text-xs px-3 py-1.5 rounded-xl font-medium transition-colors border ${
+                    className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors border ${
                       heartedArr.length > 0
-                        ? 'bg-rose-50 text-rose-500 border-rose-200 hover:bg-rose-100'
+                        ? 'bg-garden-heart-light text-garden-heart border-garden-heart/30 hover:bg-garden-heart/10'
                         : 'bg-garden-seed-light text-garden-seed border-garden-seed/30 hover:bg-garden-seed/10'
                     }`}
                     title={heartedArr.length > 0 ? `${heartedArr.length} Note(n) vorgemerkt` : 'Zwei Notes kollidieren lassen'}
@@ -147,7 +150,7 @@ export default function DumpClient({ initialNodes }: Props) {
                 {nodes.length >= 2 && (
                   <button
                     onClick={startSelectionMode}
-                    className="text-xs px-3 py-1.5 rounded-xl bg-garden-bg border border-garden-border text-garden-muted hover:text-garden-text transition-colors"
+                    className="text-xs px-3 py-1.5 rounded-lg bg-transparent border border-garden-border text-garden-muted hover:text-garden-text hover:border-garden-muted/40 transition-colors"
                   >
                     Select
                   </button>
@@ -198,7 +201,7 @@ export default function DumpClient({ initialNodes }: Props) {
 
         {/* Heart hint — shown when at least 1 hearted */}
         {!selectionMode && heartedArr.length > 0 && (
-          <div className="bg-rose-50 border border-rose-100 rounded-xl px-4 py-2.5 text-xs text-rose-500 flex items-center justify-between">
+          <div className="bg-garden-heart-light border border-garden-heart/20 rounded-lg px-4 py-2.5 text-xs text-garden-heart flex items-center justify-between">
             <span>
               {heartedArr.length === 1
                 ? '1 Note für Idea Sex vorgemerkt'
@@ -206,7 +209,7 @@ export default function DumpClient({ initialNodes }: Props) {
             </span>
             <button
               onClick={() => setHearted(new Set())}
-              className="text-rose-400 hover:text-rose-600 transition-colors ml-2"
+              className="text-garden-heart/60 hover:text-garden-heart transition-colors ml-2"
             >
               ✕
             </button>

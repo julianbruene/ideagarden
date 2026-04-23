@@ -1,6 +1,20 @@
 import type { Metadata, Viewport } from 'next'
+import { Fraunces, Inter_Tight } from 'next/font/google'
 import SwRegister from '@/components/SwRegister'
 import './globals.css'
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-fraunces',
+  display: 'swap',
+  axes: ['opsz', 'SOFT'],
+})
+
+const interTight = Inter_Tight({
+  subsets: ['latin'],
+  variable: '--font-inter-tight',
+  display: 'swap',
+})
 
 export const metadata: Metadata = {
   title: 'Idea Garden',
@@ -25,13 +39,13 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#4A7C59',
+  themeColor: '#3F6B42',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>
+    <html lang="de" className={`${fraunces.variable} ${interTight.variable}`}>
+      <body className="font-sans antialiased">
         {children}
         <SwRegister />
       </body>

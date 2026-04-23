@@ -31,20 +31,23 @@ export default async function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-garden-bg pb-24">
-      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-sm border-b border-garden-border/50 pt-safe">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-base font-semibold text-garden-text">Projects</h1>
+      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-md border-b border-garden-border/60 pt-safe">
+        <div className="max-w-lg mx-auto px-5 py-4 flex items-end justify-between">
+          <div>
+            <h1 className="font-display text-2xl text-garden-text leading-none" style={{ fontWeight: 500 }}>Projects</h1>
+            <p className="text-[11px] text-garden-muted-soft mt-1 tracking-wide">Größere Werke im Werden.</p>
+          </div>
           <NewProjectButton />
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 pt-4">
+      <main className="max-w-lg mx-auto px-5 pt-5">
         {(projects ?? []).length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-4xl mb-3">&#x1F4D6;</div>
-            <p className="text-sm text-garden-muted">Noch keine Projekte.</p>
-            <p className="text-xs text-garden-muted/60 mt-1">
-              Mach aus einer Idee ein Projekt, wenn sie groß genug ist.
+          <div className="text-center py-20">
+            <div className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</div>
+            <p className="font-serif text-base text-garden-muted italic">Noch keine Projekte.</p>
+            <p className="text-xs text-garden-muted-soft mt-2">
+              Wenn eine Idee groß genug ist, mach ein Projekt draus.
             </p>
           </div>
         ) : (

@@ -82,10 +82,10 @@ export default function ProjectCard({ project, inputCount = 0 }: Props) {
   }
 
   return (
-    <div className="relative bg-garden-surface rounded-2xl border border-garden-border hover:border-garden-muted/40 transition-all animate-fade-in">
+    <div className="group relative bg-garden-surface rounded-xl border border-garden-border/70 hover:border-garden-seed/30 hover:shadow-paper transition-all duration-200 animate-fade-in">
       <button
         onClick={(e) => { e.preventDefault(); setMenuOpen((v) => !v) }}
-        className="absolute top-3 right-3 z-10 p-1.5 rounded-lg text-garden-muted/50 hover:text-garden-muted hover:bg-garden-bg transition-colors"
+        className="absolute top-3 right-3 z-10 p-1.5 rounded-lg text-garden-muted-soft hover:text-garden-muted hover:bg-garden-bg transition-colors"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
           <circle cx="12" cy="5" r="1.8"/>
@@ -100,22 +100,22 @@ export default function ProjectCard({ project, inputCount = 0 }: Props) {
             className="fixed inset-0 z-20"
             onClick={(e) => { e.preventDefault(); setMenuOpen(false) }}
           />
-          <div className="absolute top-9 right-2 z-30 bg-white border border-garden-border rounded-xl shadow-lg overflow-hidden min-w-36 animate-fade-in">
+          <div className="absolute top-9 right-2 z-30 bg-garden-surface border border-garden-border rounded-xl shadow-paper-lg overflow-hidden min-w-40 animate-fade-in">
             <button
               onClick={handleMarkDone}
               disabled={loading}
-              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-garden-seed hover:bg-garden-seed-light transition-colors text-left"
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-seed hover:bg-garden-seed-light transition-colors text-left"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
               Als fertig markieren
             </button>
-            <div className="h-px bg-garden-border" />
+            <div className="h-px bg-garden-border/60" />
             <button
               onClick={handleDelete}
               disabled={loading}
-              className="w-full flex items-center gap-2 px-4 py-3 text-sm text-red-500 hover:bg-red-50 transition-colors text-left"
+              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-danger hover:bg-garden-danger-light transition-colors text-left"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="3 6 5 6 21 6"/>
@@ -128,29 +128,26 @@ export default function ProjectCard({ project, inputCount = 0 }: Props) {
         </>
       )}
 
-      <Link href={`/projects/${project.id}`} className="block p-4 pr-10">
-        {/* Project badge */}
-        <div className="flex items-center gap-1.5 mb-2">
-          <span className="text-[9px] uppercase tracking-widest text-garden-seed font-semibold bg-garden-seed-light px-2 py-0.5 rounded-full">
-            Projekt
-          </span>
-        </div>
+      <Link href={`/projects/${project.id}`} className="block p-5 pr-10">
+        <p className="text-[9px] uppercase tracking-[0.15em] text-garden-seed font-medium mb-2.5">
+          Projekt
+        </p>
 
-        <h3 className="text-sm font-semibold text-garden-text leading-snug mb-2 line-clamp-2">
+        <h3 className="font-display text-lg text-garden-text leading-snug mb-2 line-clamp-2" style={{ fontWeight: 500 }}>
           {title}
         </h3>
 
         {snippet ? (
-          <p className="text-xs text-garden-muted leading-relaxed line-clamp-3 mb-3">
+          <p className="font-serif text-[13px] text-garden-muted leading-relaxed line-clamp-3 mb-4" style={{ fontWeight: 400 }}>
             {snippet}
           </p>
         ) : (
-          <p className="text-xs text-garden-muted/50 italic mb-3">Noch keine Synthese</p>
+          <p className="text-xs text-garden-muted-soft italic mb-4">Noch keine Synthese</p>
         )}
 
-        <div className="flex items-center justify-between mt-auto pt-2 border-t border-garden-border/50">
-          <span className="text-[10px] text-garden-muted">{formatDate(project.created_at)}</span>
-          <span className="text-[10px] text-garden-muted">
+        <div className="flex items-center justify-between pt-3 border-t border-dashed border-garden-border">
+          <span className="text-[10px] text-garden-muted-soft tracking-wide">{formatDate(project.created_at)}</span>
+          <span className="text-[10px] text-garden-muted-soft tracking-wide">
             {inputCount} {inputCount === 1 ? 'Eintrag' : 'Einträge'}
           </span>
         </div>

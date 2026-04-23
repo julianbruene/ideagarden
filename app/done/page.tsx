@@ -79,16 +79,16 @@ export default async function KompostPage() {
 
   return (
     <div className="min-h-screen bg-garden-bg pb-24">
-      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-sm border-b border-garden-border/50 pt-safe">
-        <div className="max-w-lg mx-auto px-4 py-3">
-          <h1 className="text-base font-semibold text-garden-text">Kompost</h1>
-          <p className="text-[11px] text-garden-muted/70 mt-0.5">
+      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-md border-b border-garden-border/60 pt-safe">
+        <div className="max-w-lg mx-auto px-5 py-4">
+          <h1 className="font-display text-2xl text-garden-text leading-none" style={{ fontWeight: 500 }}>Kompost</h1>
+          <p className="text-[11px] text-garden-muted-soft mt-1 tracking-wide">
             Alles was den Kreislauf abgeschlossen hat.
           </p>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 pt-4">
+      <main className="max-w-lg mx-auto px-5 pt-5">
         <DoneClient items={items} />
       </main>
 

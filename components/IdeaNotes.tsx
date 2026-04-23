@@ -318,7 +318,7 @@ export default function IdeaNotes({ ideaId, containerType = 'idea', notesEndpoin
                           onClick={() => runTranscribe(note.id)}
                           className={`text-xs flex items-center gap-1 transition-colors ${
                             transcribeError.has(note.id)
-                              ? 'text-red-400 hover:text-red-600'
+                              ? 'text-garden-danger hover:text-garden-danger/80'
                               : 'text-garden-muted/50 hover:text-garden-accent'
                           }`}
                         >
@@ -404,7 +404,7 @@ export default function IdeaNotes({ ideaId, containerType = 'idea', notesEndpoin
                     </button>
                     <button
                       onClick={() => { handleDelete(note.id); setActionId(null) }}
-                      className="text-[10px] px-2 py-1 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors font-medium"
+                      className="text-[10px] px-2 py-1 rounded-lg bg-garden-danger-light text-garden-danger hover:bg-garden-danger/20 transition-colors font-medium"
                     >
                       Löschen
                     </button>

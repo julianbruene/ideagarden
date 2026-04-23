@@ -132,10 +132,10 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
   return (
     <div
       onClick={handleCardClick}
-      className={`relative bg-garden-surface rounded-2xl border transition-all animate-fade-in ${
+      className={`relative bg-garden-surface rounded-xl border transition-all animate-fade-in ${
         selected
           ? 'border-garden-accent ring-2 ring-garden-accent/20'
-          : 'border-garden-border'
+          : 'border-garden-border/70 hover:border-garden-accent/30 hover:shadow-paper'
       } ${selectionMode ? 'cursor-pointer' : ''}`}
     >
       {/* Selection circle */}
@@ -203,7 +203,7 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
                   onClick={(e) => { e.stopPropagation(); runTranscribe() }}
                   className={`text-xs flex items-center gap-1 transition-colors ${
                     transcribeError
-                      ? 'text-red-400 hover:text-red-600'
+                      ? 'text-garden-danger hover:text-garden-danger/80'
                       : 'text-garden-muted/50 hover:text-garden-accent'
                   }`}
                 >
@@ -280,10 +280,10 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
           <button
             onClick={(e) => { e.stopPropagation(); onHeart?.() }}
             title={hearted ? 'Herz entfernen' : 'Für Idea Sex vormerken'}
-            className={`px-4 py-2.5 transition-colors rounded-bl-2xl ${
+            className={`px-4 py-2.5 transition-colors rounded-bl-xl ${
               hearted
-                ? 'text-rose-500 hover:text-rose-400 hover:bg-rose-50'
-                : 'text-garden-muted/40 hover:text-rose-400 hover:bg-rose-50'
+                ? 'text-garden-heart hover:bg-garden-heart-light'
+                : 'text-garden-muted-soft hover:text-garden-heart hover:bg-garden-heart-light'
             }`}
           >
             <svg width="14" height="14" viewBox="0 0 24 24"
@@ -321,7 +321,7 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
           {/* Delete — right side, icon only */}
           <button
             onClick={(e) => { e.stopPropagation(); onDelete?.() }}
-            className="px-4 py-2.5 text-garden-muted/40 hover:text-red-500 hover:bg-red-50 transition-colors rounded-br-2xl"
+            className="px-4 py-2.5 text-garden-muted-soft hover:text-garden-danger hover:bg-garden-danger-light transition-colors rounded-br-xl"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">

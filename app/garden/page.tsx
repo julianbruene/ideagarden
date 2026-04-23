@@ -32,31 +32,34 @@ export default async function GardenPage() {
 
   return (
     <div className="min-h-screen bg-garden-bg pb-24">
-      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-sm border-b border-garden-border/50 pt-safe">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <h1 className="text-base font-semibold text-garden-text">Garden</h1>
+      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-md border-b border-garden-border/60 pt-safe">
+        <div className="max-w-lg mx-auto px-5 py-4 flex items-end justify-between">
+          <div>
+            <h1 className="font-display text-2xl text-garden-text leading-none" style={{ fontWeight: 500 }}>Garden</h1>
+            <p className="text-[11px] text-garden-muted-soft mt-1 tracking-wide">Was gerade wächst.</p>
+          </div>
           <Link
             href="/dump"
-            className="text-xs px-3 py-1.5 rounded-xl bg-garden-accent text-white font-medium hover:bg-garden-accent-dark transition-colors"
+            className="text-xs px-3.5 py-2 rounded-lg bg-garden-accent text-white font-medium hover:bg-garden-accent-dark transition-colors shadow-paper"
           >
-            + New idea
+            + Neue Idee
           </Link>
         </div>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 pt-4">
+      <main className="max-w-lg mx-auto px-5 pt-5">
         {(ideas ?? []).length === 0 ? (
-          <div className="text-center py-16">
-            <div className="text-4xl mb-3">&#x1F33F;</div>
-            <p className="text-sm text-garden-muted">Your garden is empty.</p>
-            <p className="text-xs text-garden-muted/60 mt-1 mb-6">
-              Promote a node from the Dump to start growing an idea.
+          <div className="text-center py-20">
+            <div className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</div>
+            <p className="font-serif text-base text-garden-muted italic">Dein Garden ist leer.</p>
+            <p className="text-xs text-garden-muted-soft mt-2 mb-6">
+              Schick eine Note aus dem Dump hierher, um anzufangen.
             </p>
             <Link
               href="/dump"
               className="text-sm text-garden-accent hover:underline"
             >
-              Go to Dump
+              Zum Dump
             </Link>
           </div>
         ) : (

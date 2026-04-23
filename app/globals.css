@@ -9,9 +9,9 @@
   }
 
   body {
-    background-color: #F8F6F1;
-    color: #1C1B18;
-    font-feature-settings: 'kern' 1, 'liga' 1;
+    background-color: #F6F1E8;
+    color: #2A2620;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -21,8 +21,16 @@
   }
 
   ::selection {
-    background-color: #EDF2EF;
-    color: #1C1B18;
+    background-color: #E8EFE4;
+    color: #2A2620;
+  }
+
+  /* Fraunces tuning — slightly softer than default */
+  .font-serif,
+  .font-display {
+    font-optical-sizing: auto;
+    font-variation-settings: 'opsz' 36, 'SOFT' 50;
+    letter-spacing: -0.011em;
   }
 }
 

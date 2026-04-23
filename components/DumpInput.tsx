@@ -192,8 +192,8 @@ export default function DumpInput({ onNodeCreated }: Props) {
 
   return (
     <div
-      className={`bg-garden-surface rounded-2xl border transition-all ${
-        isDragOver ? 'border-garden-accent bg-garden-accent-light' : 'border-garden-border'
+      className={`bg-garden-surface rounded-xl border transition-all shadow-paper ${
+        isDragOver ? 'border-garden-accent bg-garden-accent-light' : 'border-garden-border/70'
       }`}
       onDragOver={(e) => { e.preventDefault(); setIsDragOver(true) }}
       onDragLeave={() => setIsDragOver(false)}
@@ -230,9 +230,9 @@ export default function DumpInput({ onNodeCreated }: Props) {
             onClick={toggleRecording}
             disabled={busy}
             title="Spracheingabe"
-            className={`p-2 rounded-xl transition-all ${
+            className={`p-2 rounded-lg transition-all ${
               isRecording
-                ? 'bg-red-100 text-red-500 animate-pulse'
+                ? 'bg-garden-danger-light text-garden-danger animate-pulse'
                 : 'text-garden-muted hover:text-garden-text hover:bg-garden-bg'
             }`}
           >
@@ -268,14 +268,14 @@ export default function DumpInput({ onNodeCreated }: Props) {
 
           <div className="flex items-center gap-2">
             {isRecording && (
-              <span className="text-xs text-red-500 font-medium">Aufnahme läuft…</span>
+              <span className="text-xs text-garden-danger font-medium">Aufnahme läuft…</span>
             )}
 
             {/* Submit */}
             <button
               type="submit"
               disabled={!text.trim() || busy}
-              className="p-2 rounded-xl bg-garden-accent text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-garden-accent-dark transition-colors"
+              className="p-2 rounded-lg bg-garden-accent text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-garden-accent-dark transition-colors shadow-paper"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">

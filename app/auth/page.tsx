@@ -45,14 +45,11 @@ export default function AuthPage() {
     <div className="min-h-screen bg-garden-bg flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-garden-accent-light mb-4">
-            <span className="text-2xl">&#x1F331;</span>
-          </div>
-          <h1 className="text-2xl font-semibold text-garden-text tracking-tight">
+        <div className="text-center mb-12">
+          <h1 className="font-display text-4xl text-garden-text tracking-tight" style={{ fontWeight: 500 }}>
             Idea Garden
           </h1>
-          <p className="text-garden-muted text-sm mt-1">
+          <p className="font-serif text-garden-muted text-sm mt-2 italic">
             Where raw thoughts grow into something usable.
           </p>
         </div>
@@ -68,7 +65,7 @@ export default function AuthPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-garden-border bg-white text-garden-text placeholder:text-garden-muted/50 focus:outline-none focus:ring-2 focus:ring-garden-accent/30 focus:border-garden-accent text-sm"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-garden-border bg-garden-surface text-garden-text placeholder:text-garden-muted-soft focus:outline-none focus:ring-2 focus:ring-garden-accent/20 focus:border-garden-accent transition-all text-sm"
               placeholder="you@example.com"
               autoComplete="email"
             />
@@ -85,14 +82,14 @@ export default function AuthPage() {
               minLength={6}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-xl border border-garden-border bg-white text-garden-text placeholder:text-garden-muted/50 focus:outline-none focus:ring-2 focus:ring-garden-accent/30 focus:border-garden-accent text-sm"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-garden-border bg-garden-surface text-garden-text placeholder:text-garden-muted-soft focus:outline-none focus:ring-2 focus:ring-garden-accent/20 focus:border-garden-accent transition-all text-sm"
               placeholder="••••••••"
               autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">{error}</p>
+            <p className="text-sm text-garden-danger bg-garden-danger-light rounded-lg px-3 py-2">{error}</p>
           )}
           {success && (
             <p className="text-sm text-garden-accent bg-garden-accent-light rounded-lg px-3 py-2">
@@ -103,9 +100,9 @@ export default function AuthPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 bg-garden-accent text-white rounded-xl text-sm font-medium hover:bg-garden-accent-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-2.5 bg-garden-accent text-white rounded-lg text-sm font-medium hover:bg-garden-accent-dark transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-paper"
           >
-            {loading ? '...' : mode === 'signin' ? 'Sign in' : 'Create account'}
+            {loading ? '...' : mode === 'signin' ? 'Anmelden' : 'Registrieren'}
           </button>
         </form>
 

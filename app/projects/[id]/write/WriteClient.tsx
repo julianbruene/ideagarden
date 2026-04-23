@@ -167,18 +167,19 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Titel"
-            className="w-full text-3xl md:text-4xl font-serif font-semibold text-garden-text bg-transparent outline-none placeholder:text-garden-muted/30 mb-8 leading-tight"
+            className="w-full font-display text-3xl md:text-5xl text-garden-text bg-transparent outline-none placeholder:text-garden-muted-soft/50 mb-10 leading-tight"
+            style={{ fontWeight: 500 }}
           />
 
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Hier schreiben…"
-            className="w-full bg-transparent outline-none resize-none font-serif text-lg md:text-xl text-garden-text placeholder:text-garden-muted/30"
+            className="w-full bg-transparent outline-none resize-none font-serif text-lg md:text-xl text-garden-text placeholder:text-garden-muted-soft/40"
             style={{
-              lineHeight: 1.75,
+              lineHeight: 1.8,
               minHeight: '70vh',
-              fontFamily: 'ui-serif, Georgia, "Times New Roman", serif',
+              fontWeight: 400,
             }}
           />
         </div>

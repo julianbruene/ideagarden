@@ -45,7 +45,7 @@ export default function NewProjectButton() {
         {loading ? '…' : '+ New project'}
       </button>
       {error && (
-        <p className="text-[10px] text-red-500 max-w-[220px] text-right leading-tight">
+        <p className="text-[10px] text-garden-danger max-w-[220px] text-right leading-tight">
           {error}
         </p>
       )}
