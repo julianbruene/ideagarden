@@ -172,6 +172,7 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
           </div>
           <IdeaNotes
             ideaId={project.id}
+            containerType="project"
             notesEndpoint={`/api/projects/${project.id}/notes`}
             notes={inputs}
             onNoteAdded={(note) => setInputs((prev) => [...prev, note])}

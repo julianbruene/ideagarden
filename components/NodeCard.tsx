@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { IdeaNode } from '@/lib/types'
 
 interface Props {
@@ -39,6 +39,60 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
   const [promoting, setPromoting] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
   const [transcribeError, setTranscribeError] = useState(false)
+  const [editingField, setEditingField] = useState<null | 'content' | 'transcript'>(null)
+  const [editDraft, setEditDraft] = useState('')
+  const editRef = useRef<HTMLTextAreaElement>(null)
+
+  useEffect(() => {
+    if (editingField && editRef.current) {
+      editRef.current.focus()
+      editRef.current.setSelectionRange(editDraft.length, editDraft.length)
+    }
+  }, [editingField, editDraft.length])
+
+  function startEdit(field: 'content' | 'transcript') {
+    setEditingField(field)
+    setEditDraft(field === 'content' ? (node.content ?? '') : (node.image_transcript ?? ''))
+  }
+
+  function cancelEdit() {
+    setEditingField(null)
+    setEditDraft('')
+  }
+
+  async function saveEdit() {
+    const field = editingField
+    if (!field) return
+    const current = field === 'content' ? (node.content ?? '') : (node.image_transcript ?? '')
+    if (editDraft === current) { cancelEdit(); return }
+
+    const payload = field === 'content'
+      ? { content: editDraft }
+      : { image_transcript: editDraft || null }
+
+    // Optimistic
+    onNodeUpdated?.({
+      ...node,
+      ...(field === 'content' ? { content: editDraft } : { image_transcript: editDraft || null }),
+    })
+    setEditingField(null)
+    setEditDraft('')
+
+    const res = await fetch(`/api/nodes/${node.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (res.ok) {
+      const { node: updated } = await res.json()
+      if (updated) onNodeUpdated?.(updated)
+    }
+  }
+
+  function handleEditKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (e.key === 'Escape') { e.preventDefault(); cancelEdit() }
+    else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveEdit() }
+  }
 
   function runTranscribe() {
     setTranscribing(true)
@@ -116,9 +170,26 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
                 unoptimized
               />
             </div>
-            {/* Transcript */}
-            {node.image_transcript ? (
-              <p className="mt-1.5 text-xs text-garden-muted leading-relaxed whitespace-pre-wrap break-words">
+            {/* Transcript — editable */}
+            {editingField === 'transcript' ? (
+              <div className="mt-1.5" onClick={(e) => e.stopPropagation()}>
+                <textarea
+                  ref={editRef}
+                  value={editDraft}
+                  onChange={(e) => setEditDraft(e.target.value)}
+                  onBlur={saveEdit}
+                  onKeyDown={handleEditKeyDown}
+                  className="w-full bg-white border border-garden-accent/40 rounded-lg px-2 py-1.5 text-xs text-garden-muted leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20"
+                  rows={3}
+                />
+                <p className="text-[10px] text-garden-muted/50 mt-1">Cmd+Enter speichern · Esc abbrechen</p>
+              </div>
+            ) : node.image_transcript ? (
+              <p
+                className="mt-1.5 text-xs text-garden-muted leading-relaxed whitespace-pre-wrap break-words cursor-text hover:text-garden-text transition-colors"
+                onClick={(e) => { e.stopPropagation(); startEdit('transcript') }}
+                title="Klick zum Bearbeiten"
+              >
                 {node.image_transcript}
               </p>
             ) : transcribing ? (
@@ -127,36 +198,66 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
                 <p className="text-xs text-garden-muted/40 italic">Text wird extrahiert…</p>
               </div>
             ) : (
-              <button
-                onClick={(e) => { e.stopPropagation(); runTranscribe() }}
-                className={`mt-1.5 text-xs flex items-center gap-1 transition-colors ${
-                  transcribeError
-                    ? 'text-red-400 hover:text-red-600'
-                    : 'text-garden-muted/50 hover:text-garden-accent'
-                }`}
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
-                </svg>
-                {transcribeError ? 'Fehlgeschlagen — nochmal' : 'Text extrahieren'}
-              </button>
+              <div className="mt-1.5 flex items-center gap-3">
+                <button
+                  onClick={(e) => { e.stopPropagation(); runTranscribe() }}
+                  className={`text-xs flex items-center gap-1 transition-colors ${
+                    transcribeError
+                      ? 'text-red-400 hover:text-red-600'
+                      : 'text-garden-muted/50 hover:text-garden-accent'
+                  }`}
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+                  </svg>
+                  {transcribeError ? 'Fehlgeschlagen — nochmal' : 'Text extrahieren'}
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); startEdit('transcript') }}
+                  className="text-xs text-garden-muted/50 hover:text-garden-accent transition-colors"
+                >
+                  + Text hinzufügen
+                </button>
+              </div>
             )}
           </div>
         )}
 
-        {/* Text */}
-        {node.content && (
-          <p className="text-sm text-garden-text leading-relaxed whitespace-pre-wrap break-words">
+        {/* Text — editable */}
+        {editingField === 'content' ? (
+          <div onClick={(e) => e.stopPropagation()}>
+            <textarea
+              ref={editRef}
+              value={editDraft}
+              onChange={(e) => setEditDraft(e.target.value)}
+              onBlur={saveEdit}
+              onKeyDown={handleEditKeyDown}
+              className="w-full bg-white border border-garden-accent/40 rounded-lg px-2.5 py-1.5 text-sm text-garden-text leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20"
+              rows={Math.max(3, Math.min(12, editDraft.split('\n').length + 1))}
+            />
+            <p className="text-[10px] text-garden-muted/50 mt-1">Cmd+Enter speichern · Esc abbrechen</p>
+          </div>
+        ) : node.content ? (
+          <p
+            className="text-sm text-garden-text leading-relaxed whitespace-pre-wrap break-words cursor-text hover:bg-white/40 -mx-1 px-1 rounded transition-colors"
+            onClick={(e) => {
+              if (selectionMode) return
+              e.stopPropagation()
+              if (isLong && !expanded) setExpanded(true)
+              else startEdit('content')
+            }}
+            title={selectionMode ? undefined : (isLong && !expanded ? 'Klick zum Ausklappen' : 'Klick zum Bearbeiten')}
+          >
             {expanded || !isLong ? node.content : preview + '…'}
           </p>
-        )}
+        ) : null}
 
-        {isLong && !selectionMode && (
+        {isLong && expanded && !selectionMode && editingField !== 'content' && (
           <button
-            onClick={(e) => { e.stopPropagation(); setExpanded((v) => !v) }}
+            onClick={(e) => { e.stopPropagation(); setExpanded(false) }}
             className="mt-1 text-xs text-garden-accent"
           >
-            {expanded ? 'weniger' : 'mehr'}
+            weniger
           </button>
         )}
 

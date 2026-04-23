@@ -21,6 +21,38 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
   const [panelOpen, setPanelOpen] = useState(false)
   const [completing, setCompleting] = useState(false)
   const [expandedNote, setExpandedNote] = useState<string | null>(null)
+  const [notesState, setNotesState] = useState<Input[]>(notes)
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [editingNoteField, setEditingNoteField] = useState<'content' | 'transcript'>('content')
+  const [editNoteDraft, setEditNoteDraft] = useState('')
+
+  async function saveNoteEdit(note: Input) {
+    const field = editingNoteField
+    const current = field === 'content' ? note.content : (note.image_transcript ?? '')
+    if (editNoteDraft === current) { setEditingNoteId(null); return }
+
+    const payload = field === 'content'
+      ? { content: editNoteDraft }
+      : { image_transcript: editNoteDraft || null }
+
+    // Optimistic
+    const optimistic: Input = field === 'content'
+      ? { ...note, content: editNoteDraft }
+      : { ...note, image_transcript: editNoteDraft || null }
+    setNotesState((prev) => prev.map((n) => n.id === note.id ? optimistic : n))
+    setEditingNoteId(null)
+    setEditNoteDraft('')
+
+    const res = await fetch(`/api/inputs/${note.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    })
+    if (res.ok) {
+      const { input } = await res.json()
+      if (input) setNotesState((prev) => prev.map((n) => n.id === note.id ? input : n))
+    }
+  }
 
   // For autosave: track the last saved snapshot to avoid no-op writes
   const lastSaved = useRef({
@@ -240,15 +272,16 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
                   Notes ({notes.length})
                 </p>
 
-                {notes.length === 0 ? (
+                {notesState.length === 0 ? (
                   <p className="text-xs text-garden-muted/50 italic">
                     Keine Notes. Zurück ins Projekt, um welche hinzuzufügen.
                   </p>
                 ) : (
                   <ul className="space-y-2">
-                    {notes.map((note) => {
+                    {notesState.map((note) => {
                       const expanded = expandedNote === note.id
                       const isImg = isImageNote(note.content)
+                      const isEditing = editingNoteId === note.id
                       const preview = isImg
                         ? (note.image_transcript?.slice(0, 60) ?? 'Screenshot')
                         : note.content.slice(0, 60)
@@ -275,30 +308,83 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
                                   <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
                                 </svg>
                               )}
+                              {note.mirror_source_id && (
+                                <span className="text-garden-accent flex-shrink-0" title="Spiegel">
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
+                                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
+                                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
+                                  </svg>
+                                </span>
+                              )}
                               <span className="truncate flex-1">{preview}</span>
                             </div>
                           </button>
 
                           {expanded && (
                             <div className="mt-1.5 ml-1 pl-2 border-l-2 border-garden-accent/30">
-                              {isImg ? (
-                                <>
-                                  <Image
-                                    src={getImageUrl(note.content)}
-                                    alt="Note"
-                                    width={300}
-                                    height={200}
-                                    className="w-full rounded-lg object-cover max-h-40 mb-1.5"
-                                    unoptimized
+                              {isImg && (
+                                <Image
+                                  src={getImageUrl(note.content)}
+                                  alt="Note"
+                                  width={300}
+                                  height={200}
+                                  className="w-full rounded-lg object-cover max-h-40 mb-1.5"
+                                  unoptimized
+                                />
+                              )}
+
+                              {/* Editable content / transcript */}
+                              {isEditing ? (
+                                <div>
+                                  <textarea
+                                    autoFocus
+                                    value={editNoteDraft}
+                                    onChange={(e) => setEditNoteDraft(e.target.value)}
+                                    onBlur={() => saveNoteEdit(note)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Escape') { e.preventDefault(); setEditingNoteId(null); setEditNoteDraft('') }
+                                      else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveNoteEdit(note) }
+                                    }}
+                                    className="w-full bg-white border border-garden-accent/40 rounded-lg px-2 py-1.5 text-xs text-garden-text leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20"
+                                    rows={4}
                                   />
-                                  {note.image_transcript && (
-                                    <p className="text-xs text-garden-muted leading-relaxed whitespace-pre-wrap break-words">
-                                      {note.image_transcript}
-                                    </p>
-                                  )}
-                                </>
+                                  <p className="text-[10px] text-garden-muted/50 mt-1">Cmd+Enter speichern · Esc abbrechen</p>
+                                </div>
+                              ) : isImg ? (
+                                note.image_transcript ? (
+                                  <p
+                                    className="text-xs text-garden-muted leading-relaxed whitespace-pre-wrap break-words cursor-text hover:text-garden-text transition-colors"
+                                    onClick={() => {
+                                      setEditingNoteId(note.id)
+                                      setEditingNoteField('transcript')
+                                      setEditNoteDraft(note.image_transcript ?? '')
+                                    }}
+                                    title="Klick zum Bearbeiten"
+                                  >
+                                    {note.image_transcript}
+                                  </p>
+                                ) : (
+                                  <button
+                                    onClick={() => {
+                                      setEditingNoteId(note.id)
+                                      setEditingNoteField('transcript')
+                                      setEditNoteDraft('')
+                                    }}
+                                    className="text-xs text-garden-muted/50 hover:text-garden-accent italic"
+                                  >
+                                    + Text hinzufügen
+                                  </button>
+                                )
                               ) : (
-                                <p className="text-xs text-garden-text leading-relaxed whitespace-pre-wrap break-words py-1">
+                                <p
+                                  className="text-xs text-garden-text leading-relaxed whitespace-pre-wrap break-words py-1 cursor-text hover:bg-white/40 -mx-1 px-1 rounded transition-colors"
+                                  onClick={() => {
+                                    setEditingNoteId(note.id)
+                                    setEditingNoteField('content')
+                                    setEditNoteDraft(note.content)
+                                  }}
+                                  title="Klick zum Bearbeiten"
+                                >
                                   {note.content}
                                 </p>
                               )}
