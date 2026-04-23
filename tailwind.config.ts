@@ -11,8 +11,8 @@ const config: Config = {
       colors: {
         garden: {
           // Claude-style palette — neutral cream, desaturated, not buttery
-          bg: '#EEEAE0',            // main bg — neutral warm off-white (was yellowish #F6F1E8)
-          surface: '#FDFCF9',       // cards
+          bg: '#F5F2EC',            // main bg — softer neutral cream (lighter than #EEEAE0)
+          surface: '#FEFEFC',       // cards — near-white with a hint of warmth
           border: '#DDD8CB',        // hairline warm neutral gray
           text: '#1C1B17',          // crisper near-black
           muted: '#6F6B62',         // secondary text, more neutral gray
@@ -48,18 +48,21 @@ const config: Config = {
           'Roboto',
           'sans-serif',
         ],
+        // Classic serif stack — system fonts, no webfont needed
         serif: [
-          'var(--font-fraunces)',
-          'ui-serif',
           'Georgia',
+          '"Iowan Old Style"',
+          '"Charter"',
           '"Times New Roman"',
+          'ui-serif',
           'serif',
         ],
-        // Display = Fraunces for titles and literary surfaces
         display: [
-          'var(--font-fraunces)',
-          'ui-serif',
           'Georgia',
+          '"Iowan Old Style"',
+          '"Charter"',
+          '"Times New Roman"',
+          'ui-serif',
           'serif',
         ],
       },

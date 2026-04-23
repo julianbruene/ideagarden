@@ -1,14 +1,7 @@
 import type { Metadata, Viewport } from 'next'
-import { Fraunces, Inter_Tight } from 'next/font/google'
+import { Inter_Tight } from 'next/font/google'
 import SwRegister from '@/components/SwRegister'
 import './globals.css'
-
-const fraunces = Fraunces({
-  subsets: ['latin'],
-  variable: '--font-fraunces',
-  display: 'swap',
-  axes: ['opsz', 'SOFT'],
-})
 
 const interTight = Inter_Tight({
   subsets: ['latin'],
@@ -39,12 +32,12 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#EEEAE0',
+  themeColor: '#F5F2EC',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={`${fraunces.variable} ${interTight.variable}`}>
+    <html lang="de" className={interTight.variable}>
       <body className="font-sans antialiased">
         {children}
         <SwRegister />
