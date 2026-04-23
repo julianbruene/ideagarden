@@ -8,7 +8,7 @@ const navItems = [
   { href: '/dump',     label: 'Dump',     icon: DumpIcon },
   { href: '/garden',   label: 'Garden',   icon: GardenIcon },
   { href: '/projects', label: 'Projects', icon: ProjectsIcon },
-  { href: '/done',     label: 'Done',     icon: DoneIcon },
+  { href: '/done',     label: 'Kompost',  icon: DoneIcon },
 ]
 
 function DumpIcon({ active }: { active: boolean }) {
