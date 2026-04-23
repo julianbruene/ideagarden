@@ -58,23 +58,39 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
     )
     if (!confirmed) return
     setCompleting(true)
+    try {
+      const mdRes = await fetch(`/api/projects/${project.id}/export`)
+      if (!mdRes.ok) {
+        const data = await mdRes.json().catch(() => ({}))
+        alert(`Export fehlgeschlagen: ${data.error ?? mdRes.status}`)
+        setCompleting(false)
+        return
+      }
+      const { markdown } = await mdRes.json()
+      const blob = new Blob([markdown], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(project.title ?? 'projekt').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
+      a.click()
+      URL.revokeObjectURL(url)
 
-    const mdRes = await fetch(`/api/projects/${project.id}/export`)
-    const { markdown } = await mdRes.json()
-    const blob = new Blob([markdown], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${(project.title ?? 'projekt').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
-    a.click()
-    URL.revokeObjectURL(url)
-
-    await fetch(`/api/projects/${project.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
-    })
-    router.push('/done')
+      const patchRes = await fetch(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
+      })
+      if (!patchRes.ok) {
+        const data = await patchRes.json().catch(() => ({}))
+        alert(`Status-Update fehlgeschlagen: ${data.error ?? patchRes.status}`)
+        setCompleting(false)
+        return
+      }
+      router.push('/done')
+    } catch (err) {
+      alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
+      setCompleting(false)
+    }
   }
 
   return (

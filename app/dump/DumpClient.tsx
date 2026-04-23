@@ -33,21 +33,27 @@ export default function DumpClient({ initialNodes }: Props) {
   }
 
   async function handlePromote(id: string) {
-    const res = await fetch('/api/ideas', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source_node_ids: [id] }),
-    })
-    const data = await res.json()
+    try {
+      const res = await fetch('/api/ideas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source_node_ids: [id] }),
+      })
+      const data = await res.json()
 
-    if (!data.idea?.id) {
-      console.error('[promote] No idea ID returned', data)
-      return
+      if (!res.ok || !data.idea?.id) {
+        console.error('[promote] failed:', data)
+        alert(`In Garden fehlgeschlagen: ${data?.error ?? res.status}`)
+        return
+      }
+
+      setNodes((prev) => prev.filter((n) => n.id !== id))
+      setHearted((prev) => { const next = new Set(prev); next.delete(id); return next })
+      router.push(`/garden/${data.idea.id}`)
+    } catch (err) {
+      console.error('[promote] network error:', err)
+      alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
     }
-
-    setNodes((prev) => prev.filter((n) => n.id !== id))
-    setHearted((prev) => { const next = new Set(prev); next.delete(id); return next })
-    router.push(`/garden/${data.idea.id}`)
   }
 
   function toggleHeart(id: string) {

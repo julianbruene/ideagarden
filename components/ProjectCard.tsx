@@ -28,30 +28,57 @@ export default function ProjectCard({ project, inputCount = 0 }: Props) {
     e.preventDefault()
     if (!window.confirm('Projekt löschen? Das kann nicht rückgängig gemacht werden.')) return
     setLoading(true)
-    await fetch(`/api/projects/${project.id}`, { method: 'DELETE' })
-    router.refresh()
+    try {
+      const res = await fetch(`/api/projects/${project.id}`, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(`Löschen fehlgeschlagen: ${data.error ?? res.status}`)
+        setLoading(false)
+        return
+      }
+      router.refresh()
+    } catch (err) {
+      alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
+      setLoading(false)
+    }
   }
 
   async function handleMarkDone(e: React.MouseEvent) {
     e.preventDefault()
     setLoading(true)
+    try {
+      const mdRes = await fetch(`/api/projects/${project.id}/export`)
+      if (!mdRes.ok) {
+        const data = await mdRes.json().catch(() => ({}))
+        alert(`Export fehlgeschlagen: ${data.error ?? mdRes.status}`)
+        setLoading(false)
+        return
+      }
+      const { markdown } = await mdRes.json()
+      const blob = new Blob([markdown], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(project.title ?? 'projekt').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
+      a.click()
+      URL.revokeObjectURL(url)
 
-    const mdRes = await fetch(`/api/projects/${project.id}/export`)
-    const { markdown } = await mdRes.json()
-    const blob = new Blob([markdown], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${(project.title ?? 'projekt').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
-    a.click()
-    URL.revokeObjectURL(url)
-
-    await fetch(`/api/projects/${project.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
-    })
-    router.refresh()
+      const patchRes = await fetch(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
+      })
+      if (!patchRes.ok) {
+        const data = await patchRes.json().catch(() => ({}))
+        alert(`Status-Update fehlgeschlagen: ${data.error ?? patchRes.status}`)
+        setLoading(false)
+        return
+      }
+      router.refresh()
+    } catch (err) {
+      alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
+      setLoading(false)
+    }
   }
 
   return (

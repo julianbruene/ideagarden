@@ -59,15 +59,23 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
     )
     if (!confirmed) return
     setPromoting(true)
-    const res = await fetch('/api/projects', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source_idea_ids: [idea.id], title: idea.title ?? null }),
-    })
-    const data = await res.json()
-    if (data.project?.id) {
+    try {
+      const res = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ source_idea_ids: [idea.id], title: idea.title ?? null }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.project?.id) {
+        console.error('[promote-to-project] failed:', data)
+        alert(`In Projekt fehlgeschlagen: ${data?.error ?? res.status}`)
+        setPromoting(false)
+        return
+      }
       router.push(`/projects/${data.project.id}`)
-    } else {
+    } catch (err) {
+      console.error('[promote-to-project] network error:', err)
+      alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
       setPromoting(false)
     }
   }
@@ -79,23 +87,39 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
     )
     if (!confirmed) return
     setCompleting(true)
+    try {
+      const mdRes = await fetch(`/api/export/${idea.id}`)
+      if (!mdRes.ok) {
+        const data = await mdRes.json().catch(() => ({}))
+        alert(`Export fehlgeschlagen: ${data.error ?? mdRes.status}`)
+        setCompleting(false)
+        return
+      }
+      const { markdown } = await mdRes.json()
+      const blob = new Blob([markdown], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(idea.title ?? 'idea').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
+      a.click()
+      URL.revokeObjectURL(url)
 
-    const mdRes = await fetch(`/api/export/${idea.id}`)
-    const { markdown } = await mdRes.json()
-    const blob = new Blob([markdown], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${(idea.title ?? 'idea').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
-    a.click()
-    URL.revokeObjectURL(url)
-
-    await fetch(`/api/ideas/${idea.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
-    })
-    router.push('/done')
+      const patchRes = await fetch(`/api/ideas/${idea.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
+      })
+      if (!patchRes.ok) {
+        const data = await patchRes.json().catch(() => ({}))
+        alert(`Status-Update fehlgeschlagen: ${data.error ?? patchRes.status}`)
+        setCompleting(false)
+        return
+      }
+      router.push('/done')
+    } catch (err) {
+      alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
+      setCompleting(false)
+    }
   }
 
   return (
