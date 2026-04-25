@@ -31,6 +31,15 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingNoteField, setEditingNoteField] = useState<'content' | 'transcript'>('content')
   const [editNoteDraft, setEditNoteDraft] = useState('')
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set())
+
+  function toggleSectionCollapse(id: string) {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
+    })
+  }
 
   async function saveNoteEdit(note: Input) {
     const field = editingNoteField
@@ -255,144 +264,188 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
                 />
               </div>
 
-              {/* Notes — outline order */}
+              {/* Outline — sections + indented notes, mirrors ProjectOutline structure */}
               <div className="px-4 py-4">
-                <p className="text-[10px] uppercase tracking-widest text-garden-muted-soft font-medium mb-3">
-                  Notes ({sortedNotes.length})
+                <p className="font-mono micro-caps text-garden-accent-deep mb-3">
+                  Outline ({sortedNotes.length})
                 </p>
 
                 {sortedNotes.length === 0 ? (
                   <p className="text-xs text-garden-muted-soft italic">
                     Keine Notes. Im Projekt anlegen.
                   </p>
-                ) : (
-                  <ul className="space-y-2">
-                    {sortedNotes.map((note, i) => {
-                      const expanded = expandedNote === note.id
-                      const isImg = isImageNote(note.content)
-                      const isEditing = editingNoteId === note.id
-                      const preview = isImg
-                        ? (note.image_transcript?.slice(0, 60) ?? 'Screenshot')
-                        : note.content.slice(0, 60)
-                      return (
-                        <li key={note.id}>
-                          <div className={`rounded-lg border transition-colors ${
-                            note.used
-                              ? 'bg-garden-accent-light/40 border-garden-accent/30'
-                              : expanded
-                                ? 'bg-garden-bg/60 border-garden-accent/30'
-                                : 'bg-garden-bg/60 border-garden-border/50 hover:border-garden-accent/30'
-                          }`}>
-                            <div className="flex items-stretch">
+                ) : (() => {
+                  // Walk sorted list, group notes under preceding sections
+                  let currentSectionId: string | null = null
+                  let currentCollapsed = false
+                  let sectionCounter = 0
+                  let noteCounter = 0
+                  return (
+                    <ul className="space-y-1.5">
+                      {sortedNotes.map((item) => {
+                        if (item.is_section) {
+                          currentSectionId = item.id
+                          currentCollapsed = collapsedSections.has(item.id)
+                          sectionCounter++
+                          return (
+                            <li key={item.id} className="pt-2">
                               <button
-                                onClick={() => setExpandedNote(expanded ? null : note.id)}
-                                className="flex-1 text-left text-xs px-2.5 py-2 min-w-0"
+                                onClick={() => toggleSectionCollapse(item.id)}
+                                className="w-full flex items-center gap-1.5 group border-b border-garden-hairline pb-1.5 text-left"
                               >
-                                <div className="flex items-center gap-1.5 text-garden-text">
-                                  <span className="text-[9px] tabular-nums text-garden-muted-soft font-medium flex-shrink-0">
-                                    {String(i + 1).padStart(2, '0')}
-                                  </span>
-                                  {note.starred && (
-                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-garden-star flex-shrink-0">
-                                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                                    </svg>
-                                  )}
-                                  <span className={`truncate flex-1 ${note.used ? 'text-garden-muted line-through decoration-garden-muted/40' : ''}`}>
-                                    {preview}
-                                  </span>
-                                </div>
-                              </button>
-                              {/* Used toggle */}
-                              <button
-                                onClick={() => toggleUsed(note)}
-                                title={note.used ? 'Als unverwendet markieren' : 'Als verwendet markieren'}
-                                className={`flex-shrink-0 px-2 transition-colors ${
-                                  note.used
-                                    ? 'text-garden-accent'
-                                    : 'text-garden-muted-soft hover:text-garden-accent'
-                                }`}
-                              >
-                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-                                  <polyline points="20 6 9 17 4 12"/>
+                                <svg
+                                  width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                  strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
+                                  className={`flex-shrink-0 text-garden-muted transition-transform ${currentCollapsed ? '-rotate-90' : ''}`}
+                                >
+                                  <polyline points="6 9 12 15 18 9"/>
                                 </svg>
+                                <span className="font-mono micro-caps tabnums text-garden-muted-soft">
+                                  §{String(sectionCounter).padStart(2, '0')}
+                                </span>
+                                <span
+                                  className="font-display text-garden-ink truncate flex-1"
+                                  style={{ fontSize: 14, fontWeight: 500, fontStyle: 'italic' }}
+                                >
+                                  {item.content || (
+                                    <span className="text-garden-muted-soft">Unbenannter Abschnitt</span>
+                                  )}
+                                </span>
                               </button>
+                            </li>
+                          )
+                        }
+
+                        // Note row — hidden if its section is collapsed
+                        if (currentSectionId && currentCollapsed) return null
+
+                        noteCounter++
+                        const expanded = expandedNote === item.id
+                        const isImg = isImageNote(item.content)
+                        const isEditing = editingNoteId === item.id
+                        const preview = isImg
+                          ? (item.image_transcript?.slice(0, 60) ?? 'Screenshot')
+                          : item.content.slice(0, 60)
+                        const indent = !!currentSectionId
+                        return (
+                          <li key={item.id} className={indent ? 'ml-4' : ''}>
+                            <div className={`rounded-lg border transition-colors ${
+                              item.used
+                                ? 'bg-garden-accent-soft/40 border-garden-accent/30'
+                                : expanded
+                                  ? 'bg-garden-bg/60 border-garden-accent/30'
+                                  : 'bg-garden-bg/60 border-garden-hairline/50 hover:border-garden-accent/30'
+                            }`}>
+                              <div className="flex items-stretch">
+                                <button
+                                  onClick={() => setExpandedNote(expanded ? null : item.id)}
+                                  className="flex-1 text-left text-xs px-2.5 py-2 min-w-0"
+                                >
+                                  <div className="flex items-center gap-1.5 text-garden-text">
+                                    <span className="text-[9px] tabular-nums text-garden-muted-soft font-medium flex-shrink-0">
+                                      {String(noteCounter).padStart(2, '0')}
+                                    </span>
+                                    {item.starred && (
+                                      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-garden-accent flex-shrink-0">
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                      </svg>
+                                    )}
+                                    <span className={`truncate flex-1 ${item.used ? 'text-garden-muted line-through decoration-garden-muted/40' : ''}`}>
+                                      {preview}
+                                    </span>
+                                  </div>
+                                </button>
+                                <button
+                                  onClick={() => toggleUsed(item)}
+                                  title={item.used ? 'Als unverwendet markieren' : 'Als verwendet markieren'}
+                                  className={`flex-shrink-0 px-2 transition-colors ${
+                                    item.used
+                                      ? 'text-garden-accent'
+                                      : 'text-garden-muted-soft hover:text-garden-accent'
+                                  }`}
+                                >
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                                    <polyline points="20 6 9 17 4 12"/>
+                                  </svg>
+                                </button>
+                              </div>
                             </div>
-                          </div>
 
-                          {expanded && (
-                            <div className="mt-1.5 ml-1 pl-2 border-l-2 border-garden-accent/30">
-                              {isImg && (
-                                <Image
-                                  src={getImageUrl(note.content)}
-                                  alt="Note"
-                                  width={300}
-                                  height={200}
-                                  className="w-full rounded-lg object-cover max-h-40 mb-1.5"
-                                  unoptimized
-                                />
-                              )}
-
-                              {isEditing ? (
-                                <div>
-                                  <textarea
-                                    autoFocus
-                                    value={editNoteDraft}
-                                    onChange={(e) => setEditNoteDraft(e.target.value)}
-                                    onBlur={() => saveNoteEdit(note)}
-                                    onKeyDown={(e) => {
-                                      if (e.key === 'Escape') { e.preventDefault(); setEditingNoteId(null); setEditNoteDraft('') }
-                                      else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveNoteEdit(note) }
-                                    }}
-                                    className="w-full bg-white border border-garden-accent/40 rounded-lg px-2 py-1.5 text-xs text-garden-text leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20"
-                                    rows={4}
+                            {expanded && (
+                              <div className="mt-1.5 ml-1 pl-2 border-l-2 border-garden-accent/30">
+                                {isImg && (
+                                  <Image
+                                    src={getImageUrl(item.content)}
+                                    alt="Note"
+                                    width={300}
+                                    height={200}
+                                    className="w-full rounded-lg object-cover max-h-40 mb-1.5"
+                                    unoptimized
                                   />
-                                  <p className="text-[10px] text-garden-muted-soft mt-1">Cmd+Enter speichern · Esc abbrechen</p>
-                                </div>
-                              ) : isImg ? (
-                                note.image_transcript ? (
+                                )}
+
+                                {isEditing ? (
+                                  <div>
+                                    <textarea
+                                      autoFocus
+                                      value={editNoteDraft}
+                                      onChange={(e) => setEditNoteDraft(e.target.value)}
+                                      onBlur={() => saveNoteEdit(item)}
+                                      onKeyDown={(e) => {
+                                        if (e.key === 'Escape') { e.preventDefault(); setEditingNoteId(null); setEditNoteDraft('') }
+                                        else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveNoteEdit(item) }
+                                      }}
+                                      className="w-full bg-white border border-garden-accent/40 rounded-lg px-2 py-1.5 text-xs text-garden-text leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20"
+                                      rows={4}
+                                    />
+                                    <p className="text-[10px] text-garden-muted-soft mt-1">Cmd+Enter speichern · Esc abbrechen</p>
+                                  </div>
+                                ) : isImg ? (
+                                  item.image_transcript ? (
+                                    <p
+                                      className="text-xs text-garden-muted leading-relaxed whitespace-pre-wrap break-words cursor-text hover:text-garden-text transition-colors"
+                                      onClick={() => {
+                                        setEditingNoteId(item.id)
+                                        setEditingNoteField('transcript')
+                                        setEditNoteDraft(item.image_transcript ?? '')
+                                      }}
+                                      title="Klick zum Bearbeiten"
+                                    >
+                                      {item.image_transcript}
+                                    </p>
+                                  ) : (
+                                    <button
+                                      onClick={() => {
+                                        setEditingNoteId(item.id)
+                                        setEditingNoteField('transcript')
+                                        setEditNoteDraft('')
+                                      }}
+                                      className="text-xs text-garden-muted-soft hover:text-garden-accent italic"
+                                    >
+                                      + Text hinzufügen
+                                    </button>
+                                  )
+                                ) : (
                                   <p
-                                    className="text-xs text-garden-muted leading-relaxed whitespace-pre-wrap break-words cursor-text hover:text-garden-text transition-colors"
+                                    className="text-xs text-garden-text leading-relaxed whitespace-pre-wrap break-words py-1 cursor-text hover:bg-white/40 -mx-1 px-1 rounded transition-colors"
                                     onClick={() => {
-                                      setEditingNoteId(note.id)
-                                      setEditingNoteField('transcript')
-                                      setEditNoteDraft(note.image_transcript ?? '')
+                                      setEditingNoteId(item.id)
+                                      setEditingNoteField('content')
+                                      setEditNoteDraft(item.content)
                                     }}
                                     title="Klick zum Bearbeiten"
                                   >
-                                    {note.image_transcript}
+                                    {item.content}
                                   </p>
-                                ) : (
-                                  <button
-                                    onClick={() => {
-                                      setEditingNoteId(note.id)
-                                      setEditingNoteField('transcript')
-                                      setEditNoteDraft('')
-                                    }}
-                                    className="text-xs text-garden-muted-soft hover:text-garden-accent italic"
-                                  >
-                                    + Text hinzufügen
-                                  </button>
-                                )
-                              ) : (
-                                <p
-                                  className="text-xs text-garden-text leading-relaxed whitespace-pre-wrap break-words py-1 cursor-text hover:bg-white/40 -mx-1 px-1 rounded transition-colors"
-                                  onClick={() => {
-                                    setEditingNoteId(note.id)
-                                    setEditingNoteField('content')
-                                    setEditNoteDraft(note.content)
-                                  }}
-                                  title="Klick zum Bearbeiten"
-                                >
-                                  {note.content}
-                                </p>
-                              )}
-                            </div>
-                          )}
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
+                                )}
+                              </div>
+                            )}
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )
+                })()}
               </div>
             </div>
 
