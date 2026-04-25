@@ -445,7 +445,19 @@ export default function ProjectOutline({
   }
 
   async function saveItem(content: string, isSection = false): Promise<Input | null> {
-    const nextOrder = sorted.length
+    // New notes: go to the TOP (before any section) so they're "free" by default.
+    // New sections: append at the end of the outline.
+    let nextOrder: number
+    if (sorted.length === 0) {
+      nextOrder = 0
+    } else if (isSection) {
+      const maxOrder = Math.max(...sorted.map((n) => n.outline_order ?? 0))
+      nextOrder = maxOrder + 1
+    } else {
+      const minOrder = Math.min(...sorted.map((n) => n.outline_order ?? 0))
+      nextOrder = minOrder - 1
+    }
+
     const res = await fetch(`/api/projects/${projectId}/notes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
