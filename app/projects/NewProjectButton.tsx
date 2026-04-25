@@ -41,9 +41,13 @@ export default function NewProjectButton() {
     <>
       <button
         onClick={() => { setOpen(true); setError(null) }}
-        className="text-xs px-3 py-1.5 rounded-lg bg-garden-accent text-white font-medium hover:bg-garden-accent-dark transition-colors shadow-paper"
+        className="font-mono micro-caps text-garden-accent flex items-center gap-1.5 hover:text-garden-accent-deep transition-colors"
       >
-        + Neues Projekt
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Neues Projekt
       </button>
 
       {open && (

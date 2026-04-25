@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import NavBar from '@/components/NavBar'
+import Sidebar from '@/components/Sidebar'
 import NodeCard from '@/components/NodeCard'
 import DumpInput from '@/components/DumpInput'
 import IdeaSexModal from '@/components/IdeaSexModal'
@@ -123,42 +124,38 @@ export default function DumpClient({ initialNodes }: Props) {
   const canIdeaSex = nodes.length >= 2
 
   return (
-    <div className="min-h-screen bg-garden-bg pb-24">
-      {/* Header */}
-      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-md border-b border-garden-border/60 pt-safe">
-        <div className="max-w-lg md:max-w-2xl mx-auto px-5 py-4 flex items-end justify-between">
-          <div>
-            <h1 className="font-display text-2xl text-garden-text leading-none" style={{ fontWeight: 500 }}>Dump</h1>
-            <p className="text-[11px] text-garden-muted-soft mt-1 tracking-wide">Rohe Gedanken, ungefiltert.</p>
-          </div>
-          <div className="flex items-center gap-2">
+    <div className="min-h-screen bg-garden-bg pb-24 md:pb-0 md:pl-60">
+      {/* Header — editorial */}
+      <header className="px-6 md:px-12 pt-8 md:pt-10 pb-6 md:pb-8 pt-safe border-b border-garden-hairline">
+        <div className="max-w-2xl md:max-w-3xl mx-auto md:mx-0">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="font-mono micro-caps text-garden-muted-soft">01 · Dump</span>
+            <span className="h-px flex-1 bg-garden-hairline" />
             {!selectionMode ? (
               <>
                 {canIdeaSex && (
                   <button
                     onClick={handleIdeaSexClick}
-                    className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors border ${
-                      heartedArr.length > 0
-                        ? 'bg-garden-heart-light text-garden-heart border-garden-heart/30 hover:bg-garden-heart/10'
-                        : 'bg-garden-seed-light text-garden-seed border-garden-seed/30 hover:bg-garden-seed/10'
+                    className={`font-mono micro-caps transition-colors ${
+                      heartedArr.length > 0 ? 'text-garden-accent' : 'text-garden-muted hover:text-garden-ink'
                     }`}
                     title={heartedArr.length > 0 ? `${heartedArr.length} Note(n) vorgemerkt` : 'Zwei Notes kollidieren lassen'}
                   >
-                    {heartedArr.length > 0 ? `Idea Sex ♥ ${heartedArr.length}` : 'Idea Sex'}
+                    {heartedArr.length > 0 ? `Idea Sex · ${heartedArr.length}` : 'Idea Sex'}
                   </button>
                 )}
                 {nodes.length >= 2 && (
                   <button
                     onClick={startSelectionMode}
-                    className="text-xs px-3 py-1.5 rounded-lg bg-transparent border border-garden-border text-garden-muted hover:text-garden-text hover:border-garden-muted/40 transition-colors"
+                    className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
                   >
-                    Select
+                    Auswählen
                   </button>
                 )}
               </>
             ) : (
               <>
-                <span className="text-xs text-garden-muted">{selectedArr.length}/2 selected</span>
+                <span className="font-mono micro-caps text-garden-muted">{selectedArr.length}/2</span>
                 <button
                   onClick={() => {
                     if (selectedArr.length === 2) {
@@ -166,24 +163,30 @@ export default function DumpClient({ initialNodes }: Props) {
                     }
                   }}
                   disabled={selectedArr.length !== 2}
-                  className="text-xs px-3 py-1.5 rounded-xl bg-garden-seed-light text-garden-seed border border-garden-seed/30 font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                  className="font-mono micro-caps text-garden-accent disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  Collide
+                  Kollidieren
                 </button>
                 <button
                   onClick={cancelSelectionMode}
-                  className="text-xs text-garden-muted hover:text-garden-text transition-colors"
+                  className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
                 >
-                  Cancel
+                  Abbrechen
                 </button>
               </>
             )}
           </div>
+          <h1
+            className="font-display display-tight balance text-garden-ink"
+            style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, fontWeight: 400 }}
+          >
+            Was geht dir <em className="text-garden-accent" style={{ fontWeight: 500, fontStyle: 'italic' }}>gerade</em> durch den Kopf?
+          </h1>
         </div>
       </header>
 
-      <main className="max-w-lg md:max-w-2xl mx-auto px-4 pt-4 space-y-3">
-        {/* Input */}
+      <main className="max-w-2xl mx-auto px-6 md:px-12 pt-6 md:pt-10">
+        {/* Input — flat */}
         {!selectionMode && (
           <DumpInput onNodeCreated={handleNodeCreated} />
         )}
@@ -191,25 +194,25 @@ export default function DumpClient({ initialNodes }: Props) {
         {/* Empty state */}
         {nodes.length === 0 && (
           <div className="text-center py-16">
-            <div className="text-4xl mb-3">&#x1F331;</div>
-            <p className="text-sm text-garden-muted">Nothing here yet.</p>
-            <p className="text-xs text-garden-muted/60 mt-1">
-              Dump a thought above — no titles, no categories.
+            <p className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</p>
+            <p className="font-display italic text-garden-muted">Noch leer.</p>
+            <p className="font-mono text-[11px] text-garden-muted-soft mt-2">
+              Schreib oben — keine Titel, keine Kategorien.
             </p>
           </div>
         )}
 
-        {/* Heart hint — shown when at least 1 hearted */}
+        {/* Heart hint — coral pill */}
         {!selectionMode && heartedArr.length > 0 && (
-          <div className="bg-garden-heart-light border border-garden-heart/20 rounded-lg px-4 py-2.5 text-xs text-garden-heart flex items-center justify-between">
-            <span>
+          <div className="mt-6 bg-garden-accent-soft border border-garden-accent/20 rounded-lg px-4 py-2.5 flex items-center justify-between">
+            <span className="font-mono micro-caps text-garden-accent-deep">
               {heartedArr.length === 1
-                ? '1 Note für Idea Sex vorgemerkt'
-                : '2 Notes für Idea Sex vorgemerkt'}
+                ? '1 Note vorgemerkt'
+                : '2 Notes vorgemerkt'}
             </span>
             <button
               onClick={() => setHearted(new Set())}
-              className="text-garden-heart/60 hover:text-garden-heart transition-colors ml-2"
+              className="text-garden-accent/60 hover:text-garden-accent-deep transition-colors ml-2"
             >
               ✕
             </button>
@@ -218,13 +221,13 @@ export default function DumpClient({ initialNodes }: Props) {
 
         {/* Selection mode banner */}
         {selectionMode && (
-          <div className="bg-garden-seed-light border border-garden-seed/20 rounded-xl px-4 py-3 text-xs text-garden-seed">
-            Tap two nodes to collide them.
+          <div className="mt-6 bg-garden-accent-soft border border-garden-accent/20 rounded-lg px-4 py-2.5 font-mono micro-caps text-garden-accent-deep">
+            Zwei Notes antippen — sie kollidieren.
           </div>
         )}
 
         {/* Node list */}
-        <div className="space-y-3">
+        <div className="mt-6 space-y-4 pb-24 md:pb-12">
           {nodes.map((node) => (
             <NodeCard
               key={node.id}
@@ -242,6 +245,7 @@ export default function DumpClient({ initialNodes }: Props) {
         </div>
       </main>
 
+      <Sidebar />
       <NavBar />
 
       {showIdeaSex && (

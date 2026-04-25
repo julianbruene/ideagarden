@@ -22,7 +22,11 @@ export default function ProjectCard({ project, inputCount = 0, chapterCount = 0,
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const title = project.title || 'Unbenanntes Projekt'
+  const title = project.title || (isBook ? 'Unbenanntes Buch' : 'Unbenanntes Projekt')
+  const kindLabel = isBook ? 'Buch' : 'Projekt'
+  const subline = isBook
+    ? (chapterCount === 0 ? 'noch keine Kapitel' : `${chaptersDone} von ${chapterCount} Kapiteln`)
+    : null
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault()
@@ -84,16 +88,25 @@ export default function ProjectCard({ project, inputCount = 0, chapterCount = 0,
     }
   }
 
+  const progress = chapterCount > 0 ? chaptersDone / chapterCount : 0
+
   return (
-    <div className="group relative bg-garden-surface rounded-xl border border-garden-border/70 hover:border-garden-seed/30 hover:shadow-paper transition-all duration-200 animate-fade-in">
+    <div className="group relative rounded-2xl bg-garden-surface border border-garden-hairline flex flex-col transition-all animate-fade-in">
+      {/* hover stripe */}
+      <span className="absolute left-0 top-4 bottom-4 w-[2px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity bg-garden-accent" />
+
+      {/* ⋮ menu */}
       <button
         onClick={(e) => { e.preventDefault(); setMenuOpen((v) => !v) }}
-        className="absolute top-3 right-3 z-10 p-1.5 rounded-lg text-garden-muted-soft hover:text-garden-muted hover:bg-garden-bg transition-colors"
+        className={`absolute top-3 right-3 z-10 p-1.5 rounded-md transition-colors ${
+          menuOpen ? 'text-garden-ink bg-garden-hairline-soft' : 'text-garden-muted-soft hover:text-garden-ink hover:bg-garden-hairline-soft'
+        }`}
+        title="Optionen"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="12" cy="5" r="1.8"/>
-          <circle cx="12" cy="12" r="1.8"/>
-          <circle cx="12" cy="19" r="1.8"/>
+          <circle cx="12" cy="5" r="1.6"/>
+          <circle cx="12" cy="12" r="1.6"/>
+          <circle cx="12" cy="19" r="1.6"/>
         </svg>
       </button>
 
@@ -103,27 +116,27 @@ export default function ProjectCard({ project, inputCount = 0, chapterCount = 0,
             className="fixed inset-0 z-20"
             onClick={(e) => { e.preventDefault(); setMenuOpen(false) }}
           />
-          <div className="absolute top-9 right-2 z-30 bg-garden-surface border border-garden-border rounded-xl shadow-paper-lg overflow-hidden min-w-40 animate-fade-in">
+          <div className="absolute top-10 right-2 z-30 bg-garden-surface border border-garden-hairline rounded-xl shadow-paper-lg overflow-hidden min-w-44 animate-fade-in">
             <button
               onClick={handleMarkDone}
               disabled={loading}
-              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-seed hover:bg-garden-seed-light transition-colors text-left"
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-garden-accent-deep hover:bg-garden-accent-soft transition-colors text-left"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
               Als fertig markieren
             </button>
-            <div className="h-px bg-garden-border/60" />
+            <div className="h-px bg-garden-hairline" />
             <button
               onClick={handleDelete}
               disabled={loading}
-              className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-danger hover:bg-garden-danger-light transition-colors text-left"
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-[13px] text-garden-danger hover:bg-garden-danger-light transition-colors text-left"
             >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-                <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M3 6h18"/>
+                <path d="M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/>
+                <path d="M5 6l1 14a2 2 0 002 2h8a2 2 0 002-2l1-14"/>
               </svg>
               Löschen
             </button>
@@ -131,42 +144,56 @@ export default function ProjectCard({ project, inputCount = 0, chapterCount = 0,
         </>
       )}
 
-      <Link href={`/projects/${project.id}`} className="block p-5 pr-10">
-        <p className="text-[9px] uppercase tracking-[0.15em] text-garden-seed font-medium mb-2.5">
-          {isBook ? 'Buch' : 'Projekt'}
-        </p>
+      <Link href={`/projects/${project.id}`} className="flex flex-col flex-1 px-5 pt-4 pb-4 pr-10">
+        {/* meta row */}
+        <div className="flex items-center gap-2 mb-3">
+          <span className="font-mono micro-caps text-garden-accent">{kindLabel}</span>
+          <span className="font-mono micro-caps text-garden-muted-soft">· {formatDate(project.created_at)}</span>
+        </div>
 
-        <h3 className="font-display text-xl text-garden-text leading-snug mb-3 line-clamp-3" style={{ fontWeight: 500 }}>
+        <h3
+          className="font-display display-tight balance pretty text-garden-ink"
+          style={{ fontSize: 20, lineHeight: 1.2, fontWeight: 400 }}
+        >
           {title}
         </h3>
 
         {project.kernidee && (
-          <p className="font-serif text-[13px] text-garden-muted leading-relaxed line-clamp-2 mb-4 italic">
+          <p className="mt-2 font-display italic text-[13px] leading-relaxed text-garden-muted line-clamp-2">
             {project.kernidee}
           </p>
         )}
 
-        {/* Book-specific progress bar */}
+        {subline && (
+          <p className="mt-2 font-mono text-[12px] text-garden-muted">{subline}</p>
+        )}
+
+        {/* book progress bar */}
         {isBook && chapterCount > 0 && (
-          <div className="mb-3">
-            <div className="h-1 bg-garden-border/60 rounded-full overflow-hidden">
+          <div className="mt-4">
+            <div className="h-[3px] rounded-full overflow-hidden bg-garden-hairline">
               <div
-                className="h-full bg-garden-seed transition-all duration-500"
-                style={{ width: `${(chaptersDone / chapterCount) * 100}%` }}
+                className="h-full bg-garden-accent transition-all duration-500"
+                style={{ width: `${progress * 100}%` }}
               />
             </div>
           </div>
         )}
 
-        <div className="flex items-center justify-between pt-3 border-t border-dashed border-garden-border">
-          <span className="text-[10px] text-garden-muted-soft tracking-wide">{formatDate(project.created_at)}</span>
-          <span className="text-[10px] text-garden-muted-soft tracking-wide">
-            {isBook
-              ? (chapterCount === 0
-                  ? 'Noch keine Kapitel'
-                  : `${chaptersDone}/${chapterCount} Kapitel fertig`)
-              : `${inputCount} ${inputCount === 1 ? 'Eintrag' : 'Einträge'}`
-            }
+        <div className="mt-auto pt-4" />
+
+        {/* footer */}
+        <div className="flex items-center justify-between pt-3 border-t border-garden-hairline-soft">
+          <span className="font-mono micro-caps text-garden-muted-soft">
+            <span className="tabnums">{isBook ? chapterCount : inputCount}</span>{' '}
+            {isBook ? (chapterCount === 1 ? 'Kapitel' : 'Kapitel') : (inputCount === 1 ? 'Eintrag' : 'Einträge')}
+          </span>
+          <span className="font-mono micro-caps flex items-center gap-1 transition-opacity opacity-0 group-hover:opacity-100 text-garden-accent">
+            Öffnen
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"/>
+              <polyline points="12 5 19 12 12 19"/>
+            </svg>
           </span>
         </div>
       </Link>

@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import NavBar from '@/components/NavBar'
+import Sidebar from '@/components/Sidebar'
 import IdeaCard from '@/components/IdeaCard'
 import Link from 'next/link'
 
@@ -14,8 +15,8 @@ export default async function GardenPage() {
     .eq('status', 'growing')
     .order('created_at', { ascending: false })
 
-  // Fetch input counts for each idea
-  const ids = (ideas ?? []).map((i) => i.id)
+  const list = ideas ?? []
+  const ids = list.map((i) => i.id)
   let countMap: Record<string, number> = {}
 
   if (ids.length > 0) {
@@ -25,49 +26,58 @@ export default async function GardenPage() {
       .in('idea_id', ids)
 
     countMap = (counts ?? []).reduce((acc, row) => {
-      acc[row.idea_id] = (acc[row.idea_id] ?? 0) + 1
+      if (row.idea_id) acc[row.idea_id] = (acc[row.idea_id] ?? 0) + 1
       return acc
     }, {} as Record<string, number>)
   }
 
   return (
-    <div className="min-h-screen bg-garden-bg pb-24">
-      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-md border-b border-garden-border/60 pt-safe">
-        <div className="max-w-lg md:max-w-3xl mx-auto px-5 py-4 flex items-end justify-between">
-          <div>
-            <h1 className="font-display text-2xl text-garden-text leading-none" style={{ fontWeight: 500 }}>Garden</h1>
-            <p className="text-[11px] text-garden-muted-soft mt-1 tracking-wide">Was gerade wächst.</p>
-          </div>
+    <div className="min-h-screen bg-garden-bg pb-24 md:pb-0 md:pl-60">
+      <header className="px-6 md:px-12 pt-8 md:pt-10 pb-6 md:pb-8 pt-safe border-b border-garden-hairline">
+        <div className="flex items-center gap-3 mb-3">
+          <span className="font-mono micro-caps text-garden-muted-soft">02 · Garden</span>
+          <span className="h-px flex-1 bg-garden-hairline" />
           <Link
             href="/dump"
-            className="text-xs px-3.5 py-2 rounded-lg bg-garden-accent text-white font-medium hover:bg-garden-accent-dark transition-colors shadow-paper"
+            className="font-mono micro-caps text-garden-accent flex items-center gap-1.5"
           >
-            + Neue Idee
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Neue Idee
           </Link>
         </div>
+        <h1
+          className="font-display display-tight balance text-garden-ink"
+          style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, fontWeight: 400 }}
+        >
+          Was bei dir gerade <em className="text-garden-accent" style={{ fontWeight: 500, fontStyle: 'italic' }}>wächst.</em>
+        </h1>
+        <p className="mt-4 text-[13px] text-garden-muted">
+          <span className="tabnums text-garden-ink">{list.length}</span> {list.length === 1 ? 'Idee' : 'Ideen'} · ungeordnet
+        </p>
       </header>
 
-      <main className="max-w-lg md:max-w-3xl mx-auto px-5 pt-5">
-        {(ideas ?? []).length === 0 ? (
+      <main className="px-6 md:px-12 pt-6 md:pt-8">
+        {list.length === 0 ? (
           <div className="text-center py-20">
-            <div className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</div>
-            <p className="font-serif text-base text-garden-muted italic">Dein Garden ist leer.</p>
-            <p className="text-xs text-garden-muted-soft mt-2 mb-6">
-              Schick eine Note aus dem Dump hierher, um anzufangen.
+            <p className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</p>
+            <p className="font-display italic text-garden-muted">Dein Garden ist leer.</p>
+            <p className="font-mono text-[11px] text-garden-muted-soft mt-2 mb-6">
+              Schick eine Note aus dem Dump hierher.
             </p>
-            <Link
-              href="/dump"
-              className="text-sm text-garden-accent hover:underline"
-            >
-              Zum Dump
+            <Link href="/dump" className="font-mono micro-caps text-garden-accent">
+              → Zum Dump
             </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {(ideas ?? []).map((idea) => (
+            {list.map((idea, i) => (
               <IdeaCard
                 key={idea.id}
                 idea={idea}
+                index={i}
                 inputCount={countMap[idea.id] ?? 0}
               />
             ))}
@@ -75,6 +85,7 @@ export default async function GardenPage() {
         )}
       </main>
 
+      <Sidebar />
       <NavBar />
     </div>
   )

@@ -10,66 +10,76 @@ const config: Config = {
     extend: {
       colors: {
         garden: {
-          // Claude-style palette — neutral cream, desaturated, not buttery
-          bg: '#F5F2EC',            // main bg — softer neutral cream (lighter than #EEEAE0)
-          surface: '#FEFEFC',       // cards — near-white with a hint of warmth
-          border: '#DDD8CB',        // hairline warm neutral gray
-          text: '#1C1B17',          // crisper near-black
-          muted: '#6F6B62',         // secondary text, more neutral gray
-          'muted-soft': '#A19C92',  // dates, hints — soft stone gray
+          // Paper palette — single coral accent
+          bg: '#FAF8F4',            // page background — warm paper
+          surface: '#FFFFFF',       // cards, elevated
+          border: '#E8E3D8',        // hairline (alias)
+          hairline: '#E8E3D8',      // primary divider
+          'hairline-soft': '#F0EDE4', // softer divider
 
-          // Accent — forest green (Garden, primary action)
-          accent: '#3F6B42',
-          'accent-light': '#E5EBDF',
-          'accent-dark': '#2F5332',
+          text: '#1B1A17',          // ink
+          ink: '#1B1A17',           // alias
+          'ink-soft': '#4A4843',
+          muted: '#837F76',         // stone (secondary text)
+          'muted-soft': '#B6B0A4',  // dates, hints
 
-          // Seed — Anthropic-style terracotta/coral (Projects, maturation)
-          seed: '#CC785C',
-          'seed-light': '#F5E4DC',
+          // SINGLE accent — coral. Replaces former accent / seed / heart / star.
+          accent: '#E6734E',
+          'accent-light': '#FBEDE5',  // alias for hover/highlight
+          'accent-soft': '#FBEDE5',
+          'accent-deep': '#C95A38',
+          'accent-dark': '#C95A38',   // alias kept for legacy refs
 
-          // Ochre for stars, dialed back to muted gold
-          star: '#B88538',
-          'star-light': '#F5EBD4',
+          // Legacy aliases kept so older class refs still resolve to coral
+          seed: '#E6734E',
+          'seed-light': '#FBEDE5',
+          star: '#E6734E',
+          'star-light': '#FBEDE5',
+          heart: '#E6734E',
+          'heart-light': '#FBEDE5',
 
-          // Rust-red for heart/idea-sex
-          heart: '#B84A3E',
-          'heart-light': '#F2DBD6',
-
-          danger: '#A54848',
-          'danger-light': '#F0DBD8',
+          danger: '#A6452F',
+          'danger-light': '#F0E2DA',
         },
       },
       fontFamily: {
         sans: [
-          'var(--font-inter-tight)',
+          'var(--font-inter)',
           '-apple-system',
           'BlinkMacSystemFont',
           '"Segoe UI"',
           'Roboto',
           'sans-serif',
         ],
-        // Classic serif stack — system fonts, no webfont needed
-        serif: [
+        // Display = Newsreader (Editorial serif)
+        display: [
+          'var(--font-newsreader)',
+          'Newsreader',
           'Georgia',
-          '"Iowan Old Style"',
-          '"Charter"',
           '"Times New Roman"',
-          'ui-serif',
           'serif',
         ],
-        display: [
+        serif: [
+          'var(--font-newsreader)',
+          'Newsreader',
           'Georgia',
-          '"Iowan Old Style"',
-          '"Charter"',
           '"Times New Roman"',
-          'ui-serif',
           'serif',
+        ],
+        mono: [
+          'var(--font-jetbrains-mono)',
+          'ui-monospace',
+          'SFMono-Regular',
+          'Menlo',
+          'monospace',
         ],
       },
+      fontSize: {
+        'micro': ['10px', { letterSpacing: '0.16em', lineHeight: '1' }],
+      },
       boxShadow: {
-        // Warm, subtle paper shadow
-        paper: '0 1px 2px 0 rgba(42, 38, 32, 0.04), 0 1px 3px 0 rgba(42, 38, 32, 0.05)',
-        'paper-lg': '0 4px 16px -2px rgba(42, 38, 32, 0.08), 0 2px 6px 0 rgba(42, 38, 32, 0.04)',
+        paper: '0 1px 2px 0 rgba(27,26,23,0.04), 0 1px 3px 0 rgba(27,26,23,0.05)',
+        'paper-lg': '0 8px 24px -8px rgba(27,26,23,0.12), 0 2px 6px -2px rgba(27,26,23,0.06)',
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out',

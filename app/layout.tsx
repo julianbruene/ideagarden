@@ -1,12 +1,28 @@
 import type { Metadata, Viewport } from 'next'
-import { Inter_Tight } from 'next/font/google'
+import { Newsreader, Inter, JetBrains_Mono } from 'next/font/google'
 import SwRegister from '@/components/SwRegister'
 import './globals.css'
 
-const interTight = Inter_Tight({
+const newsreader = Newsreader({
   subsets: ['latin'],
-  variable: '--font-inter-tight',
+  variable: '--font-newsreader',
   display: 'swap',
+  weight: ['300', '400', '500', '600'],
+  style: ['normal', 'italic'],
+})
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+  weight: ['400', '500', '600'],
+})
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ['latin'],
+  variable: '--font-jetbrains-mono',
+  display: 'swap',
+  weight: ['400', '500'],
 })
 
 export const metadata: Metadata = {
@@ -32,12 +48,12 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#F5F2EC',
+  themeColor: '#FAF8F4',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="de" className={interTight.variable}>
+    <html lang="de" className={`${newsreader.variable} ${inter.variable} ${jetbrainsMono.variable}`}>
       <body className="font-sans antialiased">
         {children}
         <SwRegister />

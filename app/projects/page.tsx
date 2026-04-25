@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import NavBar from '@/components/NavBar'
+import Sidebar from '@/components/Sidebar'
 import ProjectCard from '@/components/ProjectCard'
 import NewProjectButton from './NewProjectButton'
 
@@ -8,7 +9,6 @@ export const dynamic = 'force-dynamic'
 export default async function ProjectsPage() {
   const supabase = await createClient()
 
-  // Top-level projects only — chapters are nested inside their parent book
   const { data: projects } = await supabase
     .from('projects')
     .select('*')
@@ -20,7 +20,6 @@ export default async function ProjectsPage() {
   const singleIds = list.filter((p) => p.kind !== 'book').map((p) => p.id)
   const bookIds = list.filter((p) => p.kind === 'book').map((p) => p.id)
 
-  // Input count for non-book projects
   const inputCountMap: Record<string, number> = {}
   if (singleIds.length > 0) {
     const { data: counts } = await supabase
@@ -32,7 +31,6 @@ export default async function ProjectsPage() {
     }
   }
 
-  // Chapter counts for books
   const chapterCountMap: Record<string, number> = {}
   const chapterDoneMap: Record<string, number> = {}
   if (bookIds.length > 0) {
@@ -49,24 +47,42 @@ export default async function ProjectsPage() {
     }
   }
 
+  const totalEntries =
+    Object.values(inputCountMap).reduce((s, n) => s + n, 0) +
+    Object.values(chapterCountMap).reduce((s, n) => s + n, 0)
+  const bookCount = bookIds.length
+
   return (
-    <div className="min-h-screen bg-garden-bg pb-24">
-      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-md border-b border-garden-border/60 pt-safe">
-        <div className="max-w-lg md:max-w-3xl mx-auto px-5 py-4 flex items-end justify-between">
-          <div>
-            <h1 className="font-display text-2xl text-garden-text leading-none" style={{ fontWeight: 500 }}>Projects</h1>
-            <p className="text-[11px] text-garden-muted-soft mt-1 tracking-wide">Größere Werke im Werden.</p>
-          </div>
+    <div className="min-h-screen bg-garden-bg pb-24 md:pb-0 md:pl-60">
+      <header className="px-6 md:px-12 pt-8 md:pt-10 pb-6 md:pb-8 pt-safe border-b border-garden-hairline">
+        <div className="flex items-center gap-3 mb-3">
+          <span className="font-mono micro-caps text-garden-muted-soft">03 · Projects</span>
+          <span className="h-px flex-1 bg-garden-hairline" />
           <NewProjectButton />
         </div>
+        <h1
+          className="font-display display-tight balance text-garden-ink"
+          style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, fontWeight: 400 }}
+        >
+          Größere Werke <em className="text-garden-accent" style={{ fontWeight: 500, fontStyle: 'italic' }}>im Werden.</em>
+        </h1>
+        {list.length > 0 && (
+          <div className="flex items-center gap-4 md:gap-6 mt-4 text-[13px] text-garden-muted flex-wrap">
+            <span><span className="tabnums text-garden-ink">{list.length}</span> aktiv</span>
+            <span className="font-mono micro-caps text-garden-muted-soft">·</span>
+            <span><span className="tabnums text-garden-ink">{bookCount}</span> {bookCount === 1 ? 'Buch' : 'Bücher'}</span>
+            <span className="font-mono micro-caps text-garden-muted-soft">·</span>
+            <span><span className="tabnums text-garden-ink">{totalEntries}</span> Einträge gesamt</span>
+          </div>
+        )}
       </header>
 
-      <main className="max-w-lg md:max-w-3xl mx-auto px-5 pt-5">
+      <main className="px-6 md:px-12 pt-6 md:pt-8">
         {list.length === 0 ? (
           <div className="text-center py-20">
-            <div className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</div>
-            <p className="font-serif text-base text-garden-muted italic">Noch keine Projekte.</p>
-            <p className="text-xs text-garden-muted-soft mt-2">
+            <p className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</p>
+            <p className="font-display italic text-garden-muted">Noch keine Projekte.</p>
+            <p className="font-mono text-[11px] text-garden-muted-soft mt-2">
               Wenn eine Idee groß genug ist, mach ein Projekt draus.
             </p>
           </div>
@@ -85,6 +101,7 @@ export default async function ProjectsPage() {
         )}
       </main>
 
+      <Sidebar />
       <NavBar />
     </div>
   )

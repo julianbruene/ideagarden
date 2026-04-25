@@ -9,9 +9,9 @@
   }
 
   body {
-    background-color: #F5F2EC;
-    color: #1C1B17;
-    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
+    background-color: #FAF8F4;
+    color: #1B1A17;
+    font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1, 'ss01' 1;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -21,18 +21,36 @@
   }
 
   ::selection {
-    background-color: #E5EBDF;
-    color: #1C1B17;
+    background-color: #FBEDE5;
+    color: #1B1A17;
   }
 
-  /* Classic serif — slight optical adjustments */
-  .font-serif,
+  /* Display headlines: tighter tracking by default */
   .font-display {
-    letter-spacing: -0.005em;
+    letter-spacing: -0.011em;
   }
 }
 
 @layer utilities {
+  /* iA-Writer / Editorial type utilities */
+  .display-tight {
+    letter-spacing: -0.02em;
+  }
+  .micro-caps {
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    font-size: 10px;
+  }
+  .tabnums {
+    font-variant-numeric: tabular-nums;
+  }
+  .balance {
+    text-wrap: balance;
+  }
+  .pretty {
+    text-wrap: pretty;
+  }
+
   .scrollbar-hide {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -41,12 +59,21 @@
     display: none;
   }
 
-  /* Safe area padding for mobile notch/home bar */
+  /* Safe area padding for mobile notch / home bar */
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom);
   }
   .pt-safe {
     padding-top: env(safe-area-inset-top);
+  }
+
+  /* Cursor blink for the flat input caret */
+  @keyframes blink {
+    0%, 49% { opacity: 1; }
+    50%, 100% { opacity: 0; }
+  }
+  .caret {
+    animation: blink 1.05s step-end infinite;
   }
 }
 

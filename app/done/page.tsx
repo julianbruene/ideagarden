@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
 import NavBar from '@/components/NavBar'
+import Sidebar from '@/components/Sidebar'
 import DoneClient, { type DoneItem } from './DoneClient'
 
 export const dynamic = 'force-dynamic'
@@ -78,20 +79,25 @@ export default async function KompostPage() {
   })
 
   return (
-    <div className="min-h-screen bg-garden-bg pb-24">
-      <header className="sticky top-0 z-30 bg-garden-bg/90 backdrop-blur-md border-b border-garden-border/60 pt-safe">
-        <div className="max-w-lg md:max-w-3xl mx-auto px-5 py-4">
-          <h1 className="font-display text-2xl text-garden-text leading-none" style={{ fontWeight: 500 }}>Kompost</h1>
-          <p className="text-[11px] text-garden-muted-soft mt-1 tracking-wide">
-            Alles was den Kreislauf abgeschlossen hat.
-          </p>
+    <div className="min-h-screen bg-garden-bg pb-24 md:pb-0 md:pl-60">
+      <header className="px-6 md:px-12 pt-8 md:pt-10 pb-6 md:pb-8 pt-safe border-b border-garden-hairline">
+        <div className="flex items-center gap-3 mb-3">
+          <span className="font-mono micro-caps text-garden-muted-soft">04 · Kompost</span>
+          <span className="h-px flex-1 bg-garden-hairline" />
         </div>
+        <h1
+          className="font-display display-tight balance text-garden-ink"
+          style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, fontWeight: 400 }}
+        >
+          Was den Kreislauf <em className="text-garden-accent" style={{ fontWeight: 500, fontStyle: 'italic' }}>abgeschlossen</em> hat.
+        </h1>
       </header>
 
-      <main className="max-w-lg md:max-w-3xl mx-auto px-5 pt-5">
+      <main className="px-6 md:px-12 pt-6 md:pt-8">
         <DoneClient items={items} />
       </main>
 
+      <Sidebar />
       <NavBar />
     </div>
   )

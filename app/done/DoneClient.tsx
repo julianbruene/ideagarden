@@ -78,10 +78,10 @@ export default function DoneClient({ items }: Props) {
 
   if (items.length === 0) {
     return (
-      <div className="text-center py-16">
-        <div className="text-4xl mb-3">&#x2705;</div>
-        <p className="text-sm text-garden-muted">Noch nichts abgeschlossen.</p>
-        <p className="text-xs text-garden-muted/60 mt-1">
+      <div className="text-center py-20">
+        <p className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</p>
+        <p className="font-display italic text-garden-muted">Noch nichts abgeschlossen.</p>
+        <p className="font-mono text-[11px] text-garden-muted-soft mt-2">
           Fertige Ideen und Projekte landen hier.
         </p>
       </div>
@@ -90,12 +90,12 @@ export default function DoneClient({ items }: Props) {
 
   return (
     <div>
-      {/* Search bar */}
-      <div className="mb-3 relative">
+      {/* Search bar — flat with hairline */}
+      <div className="mb-6 relative pb-3" style={{ borderBottom: '1px solid #E8E3D8' }}>
         <svg
-          width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-          strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-garden-muted/60 pointer-events-none"
+          width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"
+          className="absolute left-0 top-1/2 -translate-y-1/2 text-garden-muted-soft pointer-events-none"
         >
           <circle cx="11" cy="11" r="8"/>
           <line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -105,15 +105,15 @@ export default function DoneClient({ items }: Props) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Im Kompost suchen…"
-          className="w-full bg-garden-surface border border-garden-border rounded-xl pl-9 pr-9 py-2.5 text-sm text-garden-text placeholder:text-garden-muted/50 outline-none focus:border-garden-accent/50 focus:ring-2 focus:ring-garden-accent/10 transition-all"
+          className="w-full bg-transparent pl-7 pr-7 py-1 text-[15px] text-garden-ink placeholder:text-garden-muted-soft outline-none"
         />
         {query && (
           <button
             onClick={() => setQuery('')}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 rounded-lg text-garden-muted/60 hover:text-garden-text transition-colors"
+            className="absolute right-0 top-1/2 -translate-y-1/2 p-1 rounded text-garden-muted-soft hover:text-garden-ink transition-colors"
             title="Suche löschen"
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
               <line x1="18" y1="6" x2="6" y2="18"/>
               <line x1="6" y1="6" x2="18" y2="18"/>
             </svg>
@@ -123,65 +123,68 @@ export default function DoneClient({ items }: Props) {
 
       {/* Result count */}
       {query && (
-        <p className="text-[11px] text-garden-muted/70 mb-3">
+        <p className="font-mono micro-caps text-garden-muted-soft mb-4">
           {filtered.length === 0
-            ? 'Keine Treffer.'
+            ? 'Keine Treffer'
             : filtered.length === 1
               ? '1 Treffer'
               : `${filtered.length} Treffer`}
         </p>
       )}
 
-      {/* List */}
-      <div className="space-y-3">
-        {filtered.map((item) => (
+      {/* List — hairline rows */}
+      <div>
+        {filtered.map((item, i) => (
           <div
             key={`${item.kind}-${item.id}`}
-            className="bg-garden-surface rounded-2xl border border-garden-border p-4 animate-fade-in"
+            className="group relative py-5 animate-fade-in"
+            style={{
+              borderTop: i === 0 ? 'none' : '1px solid #E8E3D8',
+            }}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <span className={`text-[9px] uppercase tracking-widest font-semibold px-2 py-0.5 rounded-full ${
-                    item.kind === 'project'
-                      ? 'text-garden-seed bg-garden-seed-light'
-                      : 'text-garden-accent bg-garden-accent-light'
-                  }`}>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="font-mono micro-caps text-garden-accent">
                     {item.kind === 'project' ? 'Projekt' : 'Idee'}
                   </span>
+                  <span className="font-mono micro-caps text-garden-muted-soft">
+                    · abgeschlossen {formatDate(item.completed_at)}
+                  </span>
                 </div>
-                <h3 className="text-sm font-semibold text-garden-text truncate">
+                <h3
+                  className="font-display display-tight balance text-garden-ink"
+                  style={{ fontSize: 19, lineHeight: 1.25, fontWeight: 400 }}
+                >
                   {highlight(
                     item.title || (item.kind === 'project' ? 'Unbenanntes Projekt' : 'Unbenannte Idee'),
                     query,
                   )}
                 </h3>
                 {item.synthesis && (
-                  <p className="text-xs text-garden-muted mt-1 leading-relaxed line-clamp-2">
+                  <p className="font-display italic text-[13px] text-garden-muted mt-2 leading-relaxed line-clamp-2">
                     {highlight(item.synthesis, query)}
                   </p>
                 )}
-                <p className="text-[10px] text-garden-muted/60 mt-2">
-                  Abgeschlossen {formatDate(item.completed_at)}
-                </p>
               </div>
 
               <button
                 onClick={() => downloadMarkdown(item)}
                 disabled={downloading === item.id}
-                className="flex-shrink-0 p-2 rounded-xl border border-garden-border bg-garden-bg hover:bg-white text-garden-muted hover:text-garden-text transition-all disabled:opacity-40"
+                className="flex-shrink-0 font-mono micro-caps text-garden-muted hover:text-garden-accent transition-colors flex items-center gap-1.5 disabled:opacity-40 mt-1"
                 title="Als Markdown herunterladen"
               >
                 {downloading === item.id ? (
-                  <span className="w-4 h-4 border-2 border-garden-muted border-t-transparent rounded-full animate-spin block" />
+                  <span className="w-3 h-3 border-2 border-garden-muted border-t-transparent rounded-full animate-spin block" />
                 ) : (
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                     <polyline points="7 10 12 15 17 10" />
                     <line x1="12" y1="15" x2="12" y2="3" />
                   </svg>
                 )}
+                <span>md</span>
               </button>
             </div>
           </div>
