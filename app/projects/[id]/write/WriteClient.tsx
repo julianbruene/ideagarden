@@ -276,12 +276,39 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
                   </p>
                 ) : (() => {
                   // Walk sorted list, group notes under preceding sections
-                  let currentSectionId: string | null = null
-                  let currentCollapsed = false
+                  // Free notes (before first real section) live under virtual 'Offen' section
+                  const OFFEN_ID = '__offen__'
+                  const hasFreeNotes = sortedNotes.length > 0 && !sortedNotes[0].is_section
+                  const offenCollapsed = collapsedSections.has(OFFEN_ID)
+                  let currentSectionId: string | null = hasFreeNotes ? OFFEN_ID : null
+                  let currentCollapsed = hasFreeNotes ? offenCollapsed : false
                   let sectionCounter = 0
                   let noteCounter = 0
                   return (
                     <ul className="space-y-1.5">
+                      {hasFreeNotes && (
+                        <li>
+                          <button
+                            onClick={() => toggleSectionCollapse(OFFEN_ID)}
+                            className="w-full flex items-center gap-1.5 border-b border-garden-hairline pb-1.5 pt-2"
+                          >
+                            <svg
+                              width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                              strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
+                              className={`flex-shrink-0 text-garden-muted transition-transform ${offenCollapsed ? '-rotate-90' : ''}`}
+                            >
+                              <polyline points="6 9 12 15 18 9"/>
+                            </svg>
+                            <span className="font-mono micro-caps text-garden-muted-soft">Offen</span>
+                            <span
+                              className="font-display text-garden-muted truncate flex-1 text-left"
+                              style={{ fontSize: 13, fontWeight: 400, fontStyle: 'italic' }}
+                            >
+                              noch nicht zugeordnet
+                            </span>
+                          </button>
+                        </li>
+                      )}
                       {sortedNotes.map((item) => {
                         if (item.is_section) {
                           currentSectionId = item.id

@@ -394,10 +394,15 @@ export default function ProjectOutline({
     .filter((n) => n.role === 'user' && n.is_note !== false)
     .sort(sortByOutline)
 
+  // Free notes (those before any real section) live under a virtual 'Offen' section
+  const OFFEN_ID = '__offen__'
+  const hasFreeNotes = sorted.length > 0 && !sorted[0].is_section
+  const offenCollapsed = collapsedSections.has(OFFEN_ID)
+
   // Walk through to build the rendered list with collapse + grouping logic
   const renderItems: { item: Input; visible: boolean; sectionId: string | null; sectionIndex: number }[] = []
-  let currentSectionId: string | null = null
-  let currentSectionCollapsed = false
+  let currentSectionId: string | null = hasFreeNotes ? OFFEN_ID : null
+  let currentSectionCollapsed = hasFreeNotes ? offenCollapsed : false
   let sectionCounter = 0
   for (const item of sorted) {
     if (item.is_section) {
@@ -653,7 +658,32 @@ export default function ProjectOutline({
         >
           <SortableContext items={sorted.map((n) => n.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2">
-              {renderItems.map(({ item, visible, sectionIndex }) => {
+              {/* Virtual 'Offen' header — only when there are free notes above any real section */}
+              {hasFreeNotes && (
+                <div className="group relative pt-3">
+                  <button
+                    onClick={() => toggleSectionCollapse(OFFEN_ID)}
+                    className="w-full flex items-center gap-1.5 border-b border-garden-hairline pb-1.5"
+                  >
+                    <svg
+                      width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
+                      className={`flex-shrink-0 text-garden-muted transition-transform ${offenCollapsed ? '-rotate-90' : ''}`}
+                    >
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                    <span className="font-mono micro-caps text-garden-muted-soft mr-1">Offen</span>
+                    <span
+                      className="font-display text-garden-muted truncate flex-1 text-left"
+                      style={{ fontSize: 14, fontWeight: 400, fontStyle: 'italic' }}
+                    >
+                      noch nicht zugeordnet
+                    </span>
+                  </button>
+                </div>
+              )}
+
+              {renderItems.map(({ item, visible, sectionId, sectionIndex }) => {
                 if (!visible) {
                   // Render a hidden but still-sortable placeholder so dnd-kit
                   // keeps the item in its sortable context (otherwise
@@ -679,8 +709,8 @@ export default function ProjectOutline({
                     />
                   )
                 }
-                // Note row — indent if inside a section
-                const indent = sectionIndex > 0
+                // Note row — indent if inside any section (real or virtual Offen)
+                const indent = !!sectionId
                 return (
                   <SortableNote
                     key={item.id}
