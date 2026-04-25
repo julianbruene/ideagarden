@@ -5,7 +5,6 @@ import { useEffect, useState } from 'react'
 interface Container {
   id: string
   title: string | null
-  synthesis: string | null
 }
 
 interface Props {
@@ -103,7 +102,7 @@ export default function MirrorPicker({ noteId, excludeIdeaId, excludeProjectId, 
                       className="w-full text-left px-3 py-2 rounded-xl bg-garden-bg/60 hover:bg-garden-accent-light border border-garden-border/50 hover:border-garden-accent/30 transition-colors disabled:opacity-50"
                     >
                       <p className="text-sm font-medium text-garden-text truncate">
-                        {idea.title || idea.synthesis?.slice(0, 60) || 'Unbenannte Idee'}
+                        {idea.title || 'Unbenannte Idee'}
                       </p>
                       {submitting === idea.id && (
                         <p className="text-[10px] text-garden-accent mt-0.5">Spiegele…</p>
@@ -129,7 +128,7 @@ export default function MirrorPicker({ noteId, excludeIdeaId, excludeProjectId, 
                       className="w-full text-left px-3 py-2 rounded-xl bg-garden-bg/60 hover:bg-garden-seed-light border border-garden-border/50 hover:border-garden-seed/30 transition-colors disabled:opacity-50"
                     >
                       <p className="text-sm font-medium text-garden-text truncate">
-                        {project.title || project.synthesis?.slice(0, 60) || 'Unbenanntes Projekt'}
+                        {project.title || 'Unbenanntes Projekt'}
                       </p>
                       {submitting === project.id && (
                         <p className="text-[10px] text-garden-seed mt-0.5">Spiegele…</p>

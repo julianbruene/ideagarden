@@ -13,10 +13,12 @@ export async function PATCH(req: Request, { params }: Params) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { starred, content, image_transcript } = body as {
+  const { starred, content, image_transcript, used, outline_order } = body as {
     starred?: boolean
     content?: string
     image_transcript?: string | null
+    used?: boolean
+    outline_order?: number | null
   }
 
   // Fetch the target input (for mirror group detection + auth)
@@ -48,11 +50,16 @@ export async function PATCH(req: Request, { params }: Params) {
     if (propErr) return NextResponse.json({ error: propErr.message }, { status: 500 })
   }
 
-  // Apply local-only fields (starred) just to this input
-  if (typeof starred === 'boolean') {
+  // Apply local-only fields (don't propagate to mirrors)
+  const localUpdates: Record<string, unknown> = {}
+  if (typeof starred === 'boolean') localUpdates.starred = starred
+  if (typeof used === 'boolean') localUpdates.used = used
+  if (outline_order !== undefined) localUpdates.outline_order = outline_order
+
+  if (Object.keys(localUpdates).length > 0) {
     const { error: localErr } = await supabase
       .from('inputs')
-      .update({ starred })
+      .update(localUpdates)
       .eq('id', id)
       .eq('user_id', user.id)
 

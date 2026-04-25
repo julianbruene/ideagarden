@@ -8,13 +8,16 @@ import type { Project } from '@/lib/types'
 interface Props {
   project: Project
   inputCount?: number
+  chapterCount?: number
+  chaptersDone?: number
 }
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })
 }
 
-export default function ProjectCard({ project, inputCount = 0 }: Props) {
+export default function ProjectCard({ project, inputCount = 0, chapterCount = 0, chaptersDone = 0 }: Props) {
+  const isBook = project.kind === 'book'
   const [menuOpen, setMenuOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -44,7 +47,10 @@ export default function ProjectCard({ project, inputCount = 0 }: Props) {
     e.preventDefault()
     setLoading(true)
     try {
-      const mdRes = await fetch(`/api/projects/${project.id}/export`)
+      const exportEndpoint = isBook
+        ? `/api/projects/${project.id}/book-export`
+        : `/api/projects/${project.id}/export`
+      const mdRes = await fetch(exportEndpoint)
       if (!mdRes.ok) {
         const data = await mdRes.json().catch(() => ({}))
         alert(`Export fehlgeschlagen: ${data.error ?? mdRes.status}`)
@@ -127,17 +133,40 @@ export default function ProjectCard({ project, inputCount = 0 }: Props) {
 
       <Link href={`/projects/${project.id}`} className="block p-5 pr-10">
         <p className="text-[9px] uppercase tracking-[0.15em] text-garden-seed font-medium mb-2.5">
-          Projekt
+          {isBook ? 'Buch' : 'Projekt'}
         </p>
 
-        <h3 className="font-display text-xl text-garden-text leading-snug mb-6 line-clamp-3" style={{ fontWeight: 500 }}>
+        <h3 className="font-display text-xl text-garden-text leading-snug mb-3 line-clamp-3" style={{ fontWeight: 500 }}>
           {title}
         </h3>
+
+        {project.kernidee && (
+          <p className="font-serif text-[13px] text-garden-muted leading-relaxed line-clamp-2 mb-4 italic">
+            {project.kernidee}
+          </p>
+        )}
+
+        {/* Book-specific progress bar */}
+        {isBook && chapterCount > 0 && (
+          <div className="mb-3">
+            <div className="h-1 bg-garden-border/60 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-garden-seed transition-all duration-500"
+                style={{ width: `${(chaptersDone / chapterCount) * 100}%` }}
+              />
+            </div>
+          </div>
+        )}
 
         <div className="flex items-center justify-between pt-3 border-t border-dashed border-garden-border">
           <span className="text-[10px] text-garden-muted-soft tracking-wide">{formatDate(project.created_at)}</span>
           <span className="text-[10px] text-garden-muted-soft tracking-wide">
-            {inputCount} {inputCount === 1 ? 'Eintrag' : 'Einträge'}
+            {isBook
+              ? (chapterCount === 0
+                  ? 'Noch keine Kapitel'
+                  : `${chaptersDone}/${chapterCount} Kapitel fertig`)
+              : `${inputCount} ${inputCount === 1 ? 'Eintrag' : 'Einträge'}`
+            }
           </span>
         </div>
       </Link>

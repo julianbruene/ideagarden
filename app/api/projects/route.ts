@@ -6,9 +6,11 @@ export async function GET() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Top-level only — chapters are nested inside their parent book
   const { data, error } = await supabase
     .from('projects')
     .select('*')
+    .is('parent_project_id', null)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -24,15 +26,34 @@ export async function POST(req: Request) {
   const {
     source_idea_ids = [],
     title,
+    kernidee,
+    kind = 'single',
+    parent_project_id = null,
   } = body
 
-  // Create the project
+  // For chapters, compute the next chapter_order
+  let chapter_order: number | null = null
+  if (parent_project_id) {
+    const { data: siblings } = await supabase
+      .from('projects')
+      .select('chapter_order')
+      .eq('parent_project_id', parent_project_id)
+      .order('chapter_order', { ascending: false })
+      .limit(1)
+    const max = siblings?.[0]?.chapter_order ?? -1
+    chapter_order = max + 1
+  }
+
   const { data: project, error } = await supabase
     .from('projects')
     .insert({
       user_id: user.id,
       source_idea_ids,
       title: title ?? null,
+      kernidee: kernidee ?? null,
+      kind,
+      parent_project_id,
+      chapter_order,
     })
     .select()
     .single()
@@ -40,7 +61,7 @@ export async function POST(req: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // If created from ideas, seed with the source ideas' notes
-  if (source_idea_ids.length > 0) {
+  if (source_idea_ids.length > 0 && kind === 'single') {
     const { data: ideas } = await supabase
       .from('ideas')
       .select('id, title')
@@ -53,11 +74,9 @@ export async function POST(req: Request) {
       .eq('is_note', true)
 
     const seedParts: string[] = []
-
     for (const idea of ideas ?? []) {
       if (idea.title) seedParts.push(`## ${idea.title}`)
     }
-
     for (const n of sourceNotes ?? []) {
       if (n.content?.startsWith('[img]')) {
         if (n.image_transcript?.trim()) seedParts.push(`Screenshot: ${n.image_transcript}`)
@@ -75,6 +94,7 @@ export async function POST(req: Request) {
         content: seedText,
         role: 'user',
         is_note: true,
+        outline_order: 0,
       })
     }
   }

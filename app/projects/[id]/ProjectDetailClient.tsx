@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import NavBar from '@/components/NavBar'
-import IdeaNotes from '@/components/IdeaNotes'
+import ProjectOutline from '@/components/ProjectOutline'
 import IdeaChat from '@/components/IdeaChat'
 import type { Project, Input } from '@/lib/types'
 
@@ -13,18 +13,40 @@ interface Props {
   initialInputs: Input[]
 }
 
-type ActiveTab = 'notes' | 'chat'
+type ActiveTab = 'outline' | 'chat'
 
 export default function ProjectDetailClient({ project: initialProject, initialInputs }: Props) {
   const [project, setProject] = useState<Project>(initialProject)
   const [inputs, setInputs] = useState<Input[]>(initialInputs)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(project.title ?? '')
+
+  const [kernideeDraft, setKernideeDraft] = useState(project.kernidee ?? '')
+  const kernideeSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const [completing, setCompleting] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<ActiveTab>('notes')
+  const [activeTab, setActiveTab] = useState<ActiveTab>('outline')
   const titleRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
+
+  const isChapter = !!project.parent_project_id
+
+  // Debounced save for Kernidee
+  useEffect(() => {
+    if (kernideeDraft === (project.kernidee ?? '')) return
+    if (kernideeSaveTimer.current) clearTimeout(kernideeSaveTimer.current)
+    kernideeSaveTimer.current = setTimeout(async () => {
+      const trimmed = kernideeDraft.trim() || null
+      await fetch(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ kernidee: trimmed }),
+      })
+      setProject((p) => ({ ...p, kernidee: trimmed }))
+    }, 800)
+    return () => { if (kernideeSaveTimer.current) clearTimeout(kernideeSaveTimer.current) }
+  }, [kernideeDraft, project.id, project.kernidee])
 
   async function saveTitle() {
     setEditingTitle(false)
@@ -39,7 +61,8 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
   }
 
   async function handleDelete() {
-    if (!window.confirm('Projekt löschen? Das kann nicht rückgängig gemacht werden.')) return
+    const what = isChapter ? 'Kapitel' : 'Projekt'
+    if (!window.confirm(`${what} löschen? Das kann nicht rückgängig gemacht werden.`)) return
     try {
       const res = await fetch(`/api/projects/${project.id}`, { method: 'DELETE' })
       if (!res.ok) {
@@ -47,7 +70,11 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
         alert(`Löschen fehlgeschlagen: ${data.error ?? res.status}`)
         return
       }
-      router.push('/projects')
+      if (isChapter && project.parent_project_id) {
+        router.push(`/projects/${project.parent_project_id}`)
+      } else {
+        router.push('/projects')
+      }
     } catch (err) {
       alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
     }
@@ -55,12 +82,31 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
 
   async function handleMarkDone() {
     if (completing) return
+    const what = isChapter ? 'Kapitel' : 'Projekt'
     const confirmed = window.confirm(
-      'Projekt als fertig markieren? Es wird ins Archiv verschoben und als Markdown heruntergeladen.'
+      `${what} als fertig markieren? Es wird ${isChapter ? 'im Buch als fertig markiert' : 'ins Archiv verschoben und als Markdown heruntergeladen'}.`
     )
     if (!confirmed) return
     setCompleting(true)
     try {
+      // Chapters: just update status, no export, return to parent
+      if (isChapter) {
+        const patchRes = await fetch(`/api/projects/${project.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
+        })
+        if (!patchRes.ok) {
+          const data = await patchRes.json().catch(() => ({}))
+          alert(`Status-Update fehlgeschlagen: ${data.error ?? patchRes.status}`)
+          setCompleting(false)
+          return
+        }
+        if (project.parent_project_id) router.push(`/projects/${project.parent_project_id}`)
+        return
+      }
+
+      // Standalone single: export + archive
       const mdRes = await fetch(`/api/projects/${project.id}/export`)
       if (!mdRes.ok) {
         const data = await mdRes.json().catch(() => ({}))
@@ -95,13 +141,17 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
     }
   }
 
+  const backHref = isChapter && project.parent_project_id
+    ? `/projects/${project.parent_project_id}`
+    : '/projects'
+
   return (
     <div className="flex flex-col bg-garden-bg" style={{ height: '100dvh', paddingBottom: '56px' }}>
 
       {/* ── Header ── */}
       <header className="flex-shrink-0 bg-garden-surface border-b border-garden-border px-4 md:px-6 py-3 md:py-3.5 flex items-center gap-3">
         <Link
-          href="/projects"
+          href={backHref}
           className="p-1.5 -ml-1.5 rounded-lg hover:bg-garden-border/40 text-garden-muted transition-colors"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -113,7 +163,7 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5 mb-0.5">
             <span className="text-[9px] uppercase tracking-widest text-garden-seed font-semibold">
-              Projekt
+              {isChapter ? 'Kapitel' : 'Projekt'}
             </span>
           </div>
           {editingTitle ? (
@@ -136,7 +186,7 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
               className="font-display text-base md:text-xl text-garden-text hover:text-garden-accent transition-colors truncate block max-w-full text-left"
               style={{ fontWeight: 500 }}
             >
-              {project.title || 'Unbenanntes Projekt'}
+              {project.title || (isChapter ? 'Unbenanntes Kapitel' : 'Unbenanntes Projekt')}
             </button>
           )}
         </div>
@@ -153,7 +203,6 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
           Schreiben
         </Link>
 
-        {/* ⋮ menu — destructive/archival actions tucked away */}
         <div className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
@@ -190,7 +239,7 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
                     <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                     <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
                   </svg>
-                  Projekt löschen
+                  {isChapter ? 'Kapitel löschen' : 'Projekt löschen'}
                 </button>
               </div>
             </>
@@ -198,9 +247,26 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
         </div>
       </header>
 
+      {/* ── Kernidee bar — always visible, always editable ── */}
+      <div className="flex-shrink-0 bg-garden-surface border-b border-garden-border/60 px-4 md:px-6 py-2.5">
+        <div className="max-w-3xl">
+          <label className="text-[9px] uppercase tracking-widest text-garden-muted-soft font-medium block mb-1">
+            Kernidee
+          </label>
+          <textarea
+            value={kernideeDraft}
+            onChange={(e) => setKernideeDraft(e.target.value)}
+            placeholder="Welcher eine Gedanke trägt diesen Text?"
+            rows={1}
+            className="w-full bg-transparent font-serif text-sm md:text-base text-garden-text outline-none placeholder:text-garden-muted-soft/60 resize-none leading-relaxed"
+            style={{ fontStyle: kernideeDraft ? 'normal' : 'italic' }}
+          />
+        </div>
+      </div>
+
       {/* ── Mobile tabs ── */}
       <div className="flex-shrink-0 flex md:hidden border-b border-garden-border bg-garden-surface">
-        {(['notes', 'chat'] as ActiveTab[]).map((tab) => (
+        {(['outline', 'chat'] as ActiveTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
@@ -210,7 +276,7 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
                 : 'text-garden-muted'
             }`}
           >
-            {tab === 'notes' ? 'Notes' : 'KI-Chat'}
+            {tab === 'outline' ? 'Outline' : 'KI-Chat'}
           </button>
         ))}
       </div>
@@ -218,21 +284,23 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
       {/* ── Main panels ── */}
       <div className="flex-1 flex min-h-0 overflow-hidden max-w-7xl w-full mx-auto">
 
-        {/* Left: Notes */}
+        {/* Left: Outline */}
         <div className={`flex flex-col w-full md:w-1/2 md:border-r border-garden-border min-h-0 ${
-          activeTab === 'notes' ? 'flex' : 'hidden md:flex'
+          activeTab === 'outline' ? 'flex' : 'hidden md:flex'
         }`}>
           <div className="flex-shrink-0 px-4 py-2 border-b border-garden-border/50 bg-garden-surface/60">
-            <p className="text-[10px] uppercase tracking-widest text-garden-muted font-medium">Notes</p>
+            <p className="text-[10px] uppercase tracking-widest text-garden-muted font-medium">Outline</p>
           </div>
-          <IdeaNotes
-            ideaId={project.id}
-            containerType="project"
-            notesEndpoint={`/api/projects/${project.id}/notes`}
+          <ProjectOutline
+            projectId={project.id}
             notes={inputs}
             onNoteAdded={(note) => setInputs((prev) => [...prev, note])}
             onNoteRemoved={(id) => setInputs((prev) => prev.filter((i) => i.id !== id))}
             onNoteUpdated={(updated) => setInputs((prev) => prev.map((i) => i.id === updated.id ? updated : i))}
+            onNotesReordered={(reordered) => {
+              const reorderedMap = new Map(reordered.map((n) => [n.id, n]))
+              setInputs((prev) => prev.map((i) => reorderedMap.get(i.id) ?? i))
+            }}
           />
         </div>
 

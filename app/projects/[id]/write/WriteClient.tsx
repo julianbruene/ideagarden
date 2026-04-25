@@ -14,10 +14,17 @@ interface Props {
 function isImageNote(content: string) { return content.startsWith('[img]') }
 function getImageUrl(content: string) { return content.slice(5) }
 
+function sortByOutline(a: Input, b: Input) {
+  const ao = a.outline_order ?? Number.MAX_SAFE_INTEGER
+  const bo = b.outline_order ?? Number.MAX_SAFE_INTEGER
+  if (ao !== bo) return ao - bo
+  return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+}
+
 export default function WriteClient({ project: initialProject, notes }: Props) {
   const [title, setTitle] = useState(initialProject.title ?? '')
   const [content, setContent] = useState(initialProject.writing_content ?? '')
-  const [outline, setOutline] = useState(initialProject.outline ?? '')
+  const [kernidee, setKernidee] = useState(initialProject.kernidee ?? '')
   const [panelOpen, setPanelOpen] = useState(false)
   const [completing, setCompleting] = useState(false)
   const [expandedNote, setExpandedNote] = useState<string | null>(null)
@@ -35,7 +42,6 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
       ? { content: editNoteDraft }
       : { image_transcript: editNoteDraft || null }
 
-    // Optimistic
     const optimistic: Input = field === 'content'
       ? { ...note, content: editNoteDraft }
       : { ...note, image_transcript: editNoteDraft || null }
@@ -54,11 +60,20 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
     }
   }
 
-  // For autosave: track the last saved snapshot to avoid no-op writes
+  async function toggleUsed(note: Input) {
+    const next = !note.used
+    setNotesState((prev) => prev.map((n) => n.id === note.id ? { ...n, used: next } : n))
+    await fetch(`/api/inputs/${note.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ used: next }),
+    })
+  }
+
   const lastSaved = useRef({
     title: initialProject.title ?? '',
     content: initialProject.writing_content ?? '',
-    outline: initialProject.outline ?? '',
+    kernidee: initialProject.kernidee ?? '',
   })
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router = useRouter()
@@ -67,10 +82,10 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
     if (
       title === lastSaved.current.title &&
       content === lastSaved.current.content &&
-      outline === lastSaved.current.outline
+      kernidee === lastSaved.current.kernidee
     ) return
 
-    const snapshot = { title, content, outline }
+    const snapshot = { title, content, kernidee }
     try {
       await fetch(`/api/projects/${initialProject.id}`, {
         method: 'PATCH',
@@ -78,25 +93,23 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
         body: JSON.stringify({
           title: snapshot.title.trim() || null,
           writing_content: snapshot.content,
-          outline: snapshot.outline,
+          kernidee: snapshot.kernidee.trim() || null,
         }),
       })
       lastSaved.current = { ...snapshot }
     } catch (e) {
       console.error('Autosave failed:', e)
     }
-  }, [title, content, outline, initialProject.id])
+  }, [title, content, kernidee, initialProject.id])
 
-  // Debounced autosave
   useEffect(() => {
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(save, 1200)
     return () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
     }
-  }, [title, content, outline, save])
+  }, [title, content, kernidee, save])
 
-  // Save on unload
   useEffect(() => {
     const handler = () => {
       if (saveTimer.current) clearTimeout(saveTimer.current)
@@ -108,42 +121,56 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
 
   async function handleDone() {
     if (completing) return
+    const isChapter = !!initialProject.parent_project_id
+    const what = isChapter ? 'Kapitel' : 'Projekt'
     const confirmed = window.confirm(
-      'Projekt als fertig markieren? Wird als Markdown heruntergeladen und ins Archiv verschoben.'
+      isChapter
+        ? `${what} als fertig markieren? Es wird im Buch als fertig markiert.`
+        : `${what} als fertig markieren? Wird als Markdown heruntergeladen und ins Archiv verschoben.`
     )
     if (!confirmed) return
     setCompleting(true)
 
-    // Flush any pending save
     if (saveTimer.current) clearTimeout(saveTimer.current)
     await save()
 
-    const mdRes = await fetch(`/api/projects/${initialProject.id}/export`)
-    const { markdown } = await mdRes.json()
-    const blob = new Blob([markdown], { type: 'text/markdown' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${(title.trim() || 'projekt').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
-    a.click()
-    URL.revokeObjectURL(url)
+    if (!isChapter) {
+      const mdRes = await fetch(`/api/projects/${initialProject.id}/export`)
+      const { markdown } = await mdRes.json()
+      const blob = new Blob([markdown], { type: 'text/markdown' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(title.trim() || 'projekt').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
+      a.click()
+      URL.revokeObjectURL(url)
+    }
 
     await fetch(`/api/projects/${initialProject.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
     })
-    router.push('/done')
+
+    if (isChapter && initialProject.parent_project_id) {
+      router.push(`/projects/${initialProject.parent_project_id}`)
+    } else {
+      router.push('/done')
+    }
   }
+
+  const sortedNotes = [...notesState].filter((n) => n.role === 'user' && n.is_note !== false).sort(sortByOutline)
+  const backHref = initialProject.parent_project_id
+    ? `/projects/${initialProject.parent_project_id}`
+    : `/projects/${initialProject.id}`
 
   return (
     <div className="fixed inset-0 bg-white z-50 flex flex-col" style={{ minHeight: '100dvh' }}>
-      {/* Top bar — only back arrow. No destructive actions here. */}
       <div className="flex-shrink-0 flex items-center justify-between px-4 md:px-6 py-3">
         <Link
-          href={`/projects/${initialProject.id}`}
+          href={backHref}
           className="p-1.5 -ml-1.5 rounded-lg text-garden-muted/50 hover:text-garden-muted hover:bg-garden-bg transition-colors flex items-center gap-1.5"
-          title="Zurück zum Projekt"
+          title="Zurück"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -153,7 +180,6 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
         </Link>
       </div>
 
-      {/* Main writing surface — centered, wider on desktop for comfortable prose */}
       <div className="flex-1 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-6 md:px-12 lg:px-16 py-6 md:py-12 lg:py-16">
           <input
@@ -178,12 +204,12 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
         </div>
       </div>
 
-      {/* Edge tab — always visible, opens side panel */}
+      {/* Edge tab — desktop */}
       {!panelOpen && (
         <button
           onClick={() => setPanelOpen(true)}
           className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 items-center gap-1 bg-garden-bg border border-r-0 border-garden-border rounded-l-xl py-4 px-2 text-garden-muted/60 hover:text-garden-accent hover:bg-white transition-colors"
-          title="Notizen & Gliederung"
+          title="Kernidee & Notes"
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
@@ -192,28 +218,24 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
         </button>
       )}
 
-      {/* Mobile panel toggle — floating button bottom-right */}
+      {/* Mobile panel toggle */}
       {!panelOpen && (
         <button
           onClick={() => setPanelOpen(true)}
-          className="md:hidden fixed right-4 bottom-4 bg-garden-surface border border-garden-border rounded-full p-3 shadow-lg text-garden-muted hover:text-garden-accent transition-colors"
-          title="Notizen & Gliederung"
+          className="md:hidden fixed right-4 bottom-4 bg-garden-surface border border-garden-border rounded-full p-3 shadow-paper-lg text-garden-muted hover:text-garden-accent transition-colors"
+          title="Kernidee & Notes"
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
-            <line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/>
-            <polyline points="10 9 9 9 8 9"/>
           </svg>
         </button>
       )}
 
-      {/* Side panel (desktop) / bottom sheet (mobile) */}
+      {/* Side panel / bottom sheet */}
       {panelOpen && (
         <>
-          {/* Backdrop on mobile */}
           <div
             className="md:hidden fixed inset-0 bg-black/20 z-40"
             onClick={() => setPanelOpen(false)}
@@ -221,12 +243,11 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
 
           <aside className="
             fixed z-50 bg-garden-surface border-garden-border
-            md:top-0 md:right-0 md:h-full md:w-80 md:border-l md:shadow-xl
-            inset-x-0 bottom-0 max-h-[80vh] rounded-t-2xl border-t shadow-2xl
+            md:top-0 md:right-0 md:h-full md:w-80 md:border-l md:shadow-paper-lg
+            inset-x-0 bottom-0 max-h-[85vh] rounded-t-2xl border-t shadow-paper-lg
             md:rounded-none md:inset-x-auto
             flex flex-col animate-fade-in
           ">
-            {/* Panel header */}
             <div className="flex-shrink-0 flex items-center justify-between px-4 py-3 border-b border-garden-border">
               <h3 className="text-xs uppercase tracking-widest text-garden-muted font-semibold">
                 Referenz
@@ -242,37 +263,36 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
               </button>
             </div>
 
-            {/* Panel content */}
             <div className="flex-1 overflow-y-auto">
 
-              {/* Outline */}
-              <div className="px-4 py-4 border-b border-garden-border/60">
-                <p className="text-[10px] uppercase tracking-widest text-garden-muted/70 font-medium mb-2">
-                  Gliederung
+              {/* Kernidee — always at top, always editable */}
+              <div className="px-4 py-4 border-b border-garden-border/60 bg-garden-bg/30">
+                <p className="text-[10px] uppercase tracking-widest text-garden-muted-soft font-medium mb-2">
+                  Kernidee
                 </p>
                 <textarea
-                  value={outline}
-                  onChange={(e) => setOutline(e.target.value)}
-                  placeholder={'1. Einleitung\n2. Hauptteil\n3. Schluss'}
-                  className="w-full bg-garden-bg/40 rounded-lg px-3 py-2 text-sm text-garden-text resize-y outline-none focus:ring-2 focus:ring-garden-accent/20 border border-garden-border/50 placeholder:text-garden-muted/40 font-mono leading-relaxed"
-                  rows={6}
-                  style={{ minHeight: '120px' }}
+                  value={kernidee}
+                  onChange={(e) => setKernidee(e.target.value)}
+                  placeholder="Welcher eine Gedanke trägt diesen Text?"
+                  rows={2}
+                  className="w-full bg-transparent font-serif text-sm text-garden-text outline-none placeholder:text-garden-muted-soft/60 resize-none leading-relaxed"
+                  style={{ fontStyle: kernidee ? 'normal' : 'italic' }}
                 />
               </div>
 
-              {/* Notes */}
+              {/* Notes — outline order */}
               <div className="px-4 py-4">
-                <p className="text-[10px] uppercase tracking-widest text-garden-muted/70 font-medium mb-3">
-                  Notes ({notes.length})
+                <p className="text-[10px] uppercase tracking-widest text-garden-muted-soft font-medium mb-3">
+                  Notes ({sortedNotes.length})
                 </p>
 
-                {notesState.length === 0 ? (
-                  <p className="text-xs text-garden-muted/50 italic">
-                    Keine Notes. Zurück ins Projekt, um welche hinzuzufügen.
+                {sortedNotes.length === 0 ? (
+                  <p className="text-xs text-garden-muted-soft italic">
+                    Keine Notes. Im Projekt anlegen.
                   </p>
                 ) : (
                   <ul className="space-y-2">
-                    {notesState.map((note) => {
+                    {sortedNotes.map((note, i) => {
                       const expanded = expandedNote === note.id
                       const isImg = isImageNote(note.content)
                       const isEditing = editingNoteId === note.id
@@ -281,38 +301,48 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
                         : note.content.slice(0, 60)
                       return (
                         <li key={note.id}>
-                          <button
-                            onClick={() => setExpandedNote(expanded ? null : note.id)}
-                            className={`w-full text-left text-xs px-2.5 py-2 rounded-lg border transition-colors ${
-                              expanded
-                                ? 'bg-garden-accent-light border-garden-accent/30'
+                          <div className={`rounded-lg border transition-colors ${
+                            note.used
+                              ? 'bg-garden-accent-light/40 border-garden-accent/30'
+                              : expanded
+                                ? 'bg-garden-bg/60 border-garden-accent/30'
                                 : 'bg-garden-bg/60 border-garden-border/50 hover:border-garden-accent/30'
-                            }`}
-                          >
-                            <div className="flex items-center gap-1.5 text-garden-text">
-                              {isImg && (
-                                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="flex-shrink-0">
-                                  <rect x="3" y="3" width="18" height="18" rx="2"/>
-                                  <circle cx="8.5" cy="8.5" r="1.5"/>
-                                  <polyline points="21 15 16 10 5 21"/>
+                          }`}>
+                            <div className="flex items-stretch">
+                              <button
+                                onClick={() => setExpandedNote(expanded ? null : note.id)}
+                                className="flex-1 text-left text-xs px-2.5 py-2 min-w-0"
+                              >
+                                <div className="flex items-center gap-1.5 text-garden-text">
+                                  <span className="text-[9px] tabular-nums text-garden-muted-soft font-medium flex-shrink-0">
+                                    {String(i + 1).padStart(2, '0')}
+                                  </span>
+                                  {note.starred && (
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-garden-star flex-shrink-0">
+                                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                    </svg>
+                                  )}
+                                  <span className={`truncate flex-1 ${note.used ? 'text-garden-muted line-through decoration-garden-muted/40' : ''}`}>
+                                    {preview}
+                                  </span>
+                                </div>
+                              </button>
+                              {/* Used toggle */}
+                              <button
+                                onClick={() => toggleUsed(note)}
+                                title={note.used ? 'Als unverwendet markieren' : 'Als verwendet markieren'}
+                                className={`flex-shrink-0 px-2 transition-colors ${
+                                  note.used
+                                    ? 'text-garden-accent'
+                                    : 'text-garden-muted-soft hover:text-garden-accent'
+                                }`}
+                              >
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                                  <polyline points="20 6 9 17 4 12"/>
                                 </svg>
-                              )}
-                              {note.starred && (
-                                <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" className="text-amber-400 flex-shrink-0">
-                                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-                                </svg>
-                              )}
-                              {note.mirror_source_id && (
-                                <span className="text-garden-accent flex-shrink-0" title="Spiegel">
-                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2}>
-                                    <path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/>
-                                    <path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/>
-                                  </svg>
-                                </span>
-                              )}
-                              <span className="truncate flex-1">{preview}</span>
+                              </button>
                             </div>
-                          </button>
+                          </div>
 
                           {expanded && (
                             <div className="mt-1.5 ml-1 pl-2 border-l-2 border-garden-accent/30">
@@ -327,7 +357,6 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
                                 />
                               )}
 
-                              {/* Editable content / transcript */}
                               {isEditing ? (
                                 <div>
                                   <textarea
@@ -342,7 +371,7 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
                                     className="w-full bg-white border border-garden-accent/40 rounded-lg px-2 py-1.5 text-xs text-garden-text leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20"
                                     rows={4}
                                   />
-                                  <p className="text-[10px] text-garden-muted/50 mt-1">Cmd+Enter speichern · Esc abbrechen</p>
+                                  <p className="text-[10px] text-garden-muted-soft mt-1">Cmd+Enter speichern · Esc abbrechen</p>
                                 </div>
                               ) : isImg ? (
                                 note.image_transcript ? (
@@ -364,7 +393,7 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
                                       setEditingNoteField('transcript')
                                       setEditNoteDraft('')
                                     }}
-                                    className="text-xs text-garden-muted/50 hover:text-garden-accent italic"
+                                    className="text-xs text-garden-muted-soft hover:text-garden-accent italic"
                                   >
                                     + Text hinzufügen
                                   </button>
@@ -392,7 +421,7 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
               </div>
             </div>
 
-            {/* Footer — finish project action, tucked away */}
+            {/* Footer — finish action */}
             <div className="flex-shrink-0 border-t border-garden-border/60 px-4 py-3 bg-garden-bg/40">
               <button
                 onClick={handleDone}
@@ -402,7 +431,11 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12"/>
                 </svg>
-                {completing ? 'Wird abgeschlossen…' : 'Projekt abschließen & exportieren'}
+                {completing
+                  ? 'Wird abgeschlossen…'
+                  : initialProject.parent_project_id
+                    ? 'Kapitel abschließen'
+                    : 'Projekt abschließen & exportieren'}
               </button>
             </div>
           </aside>

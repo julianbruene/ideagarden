@@ -2,13 +2,15 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import type { ProjectKind } from '@/lib/types'
 
 export default function NewProjectButton() {
+  const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
 
-  async function handleClick() {
+  async function create(kind: ProjectKind) {
     if (loading) return
     setError(null)
     setLoading(true)
@@ -16,39 +18,91 @@ export default function NewProjectButton() {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ kind }),
       })
       const data = await res.json()
       if (!res.ok || !data.project?.id) {
         const msg = data?.error ?? `Fehler ${res.status}`
-        console.error('[new project] failed:', msg, data)
+        console.error('[new project]', msg, data)
         setError(msg)
         setLoading(false)
         return
       }
+      setOpen(false)
       router.push(`/projects/${data.project.id}`)
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : 'Netzwerkfehler'
-      console.error('[new project] network error:', e)
       setError(msg)
       setLoading(false)
     }
   }
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <>
       <button
-        onClick={handleClick}
-        disabled={loading}
-        className="text-xs px-3 py-1.5 rounded-xl bg-garden-accent text-white font-medium hover:bg-garden-accent-dark transition-colors disabled:opacity-50"
+        onClick={() => { setOpen(true); setError(null) }}
+        className="text-xs px-3 py-1.5 rounded-lg bg-garden-accent text-white font-medium hover:bg-garden-accent-dark transition-colors shadow-paper"
       >
-        {loading ? '…' : '+ New project'}
+        + Neues Projekt
       </button>
-      {error && (
-        <p className="text-[10px] text-garden-danger max-w-[220px] text-right leading-tight">
-          {error}
-        </p>
+
+      {open && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-end md:items-center justify-center p-0 md:p-6 animate-fade-in">
+          <div className="w-full md:max-w-md bg-garden-surface rounded-t-2xl md:rounded-2xl border border-garden-border shadow-paper-lg flex flex-col">
+            {/* Header */}
+            <div className="flex-shrink-0 flex items-center justify-between px-5 py-4 border-b border-garden-border">
+              <div>
+                <h3 className="font-display text-lg text-garden-text" style={{ fontWeight: 500 }}>Neues Projekt</h3>
+                <p className="text-xs text-garden-muted-soft mt-0.5">Was willst du anlegen?</p>
+              </div>
+              <button
+                onClick={() => setOpen(false)}
+                className="p-1.5 rounded-lg text-garden-muted hover:text-garden-text transition-colors"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Choices */}
+            <div className="p-4 space-y-2.5">
+              <button
+                onClick={() => create('single')}
+                disabled={loading}
+                className="w-full text-left p-4 rounded-xl border border-garden-border/70 hover:border-garden-accent/40 hover:bg-garden-accent-light/30 transition-all disabled:opacity-50 group"
+              >
+                <h4 className="font-display text-base text-garden-text mb-1" style={{ fontWeight: 500 }}>
+                  Einzeltext
+                </h4>
+                <p className="text-xs text-garden-muted leading-relaxed">
+                  Newsletter, Essay, Kapitel — ein abgeschlossener Text mit eigenem Schreibeditor.
+                </p>
+              </button>
+
+              <button
+                onClick={() => create('book')}
+                disabled={loading}
+                className="w-full text-left p-4 rounded-xl border border-garden-border/70 hover:border-garden-seed/40 hover:bg-garden-seed-light/40 transition-all disabled:opacity-50 group"
+              >
+                <h4 className="font-display text-base text-garden-text mb-1" style={{ fontWeight: 500 }}>
+                  Buch
+                </h4>
+                <p className="text-xs text-garden-muted leading-relaxed">
+                  Mehrere Kapitel zusammen. Container — Schreiben passiert in den einzelnen Kapiteln.
+                </p>
+              </button>
+            </div>
+
+            {error && (
+              <div className="px-4 pb-4">
+                <p className="text-xs text-garden-danger bg-garden-danger-light rounded-lg px-3 py-2">{error}</p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
-    </div>
+    </>
   )
 }
