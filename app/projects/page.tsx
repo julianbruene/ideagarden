@@ -54,7 +54,7 @@ export default async function ProjectsPage() {
 
   return (
     <div className="min-h-screen bg-garden-bg pb-24 md:pb-0 md:pl-60">
-      <header className="px-6 md:px-12 pt-[calc(env(safe-area-inset-top,0px)+56px)] md:pt-10 pb-6 md:pb-8 border-b border-garden-hairline">
+      <header className="px-6 md:px-12 page-header-pt pb-6 md:pb-8 border-b border-garden-hairline">
         <div className="flex items-center gap-3 mb-3">
           <span className="font-mono micro-caps text-garden-muted-soft">03 · Projects</span>
           <span className="h-px flex-1 bg-garden-hairline" />

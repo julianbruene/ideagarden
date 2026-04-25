@@ -67,6 +67,16 @@
     padding-top: env(safe-area-inset-top);
   }
 
+  /* Page header top padding: notch + breathing room on mobile, fixed on desktop */
+  .page-header-pt {
+    padding-top: calc(env(safe-area-inset-top) + 56px);
+  }
+  @media (min-width: 768px) {
+    .page-header-pt {
+      padding-top: 2.5rem;
+    }
+  }
+
   /* Cursor blink for the flat input caret */
   @keyframes blink {
     0%, 49% { opacity: 1; }
