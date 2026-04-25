@@ -2,6 +2,7 @@ export type NodeContentType = 'text' | 'voice' | 'image' | 'quote'
 export type IdeaStatus = 'growing' | 'done'
 export type ProjectStatus = 'active' | 'done'
 export type ProjectKind = 'single' | 'book'
+export type ChatRole = 'sparring' | 'researcher' | 'editor'
 export type InputRole = 'user' | 'assistant'
 export type ContainerType = 'idea' | 'project'
 
@@ -55,6 +56,7 @@ export interface Project {
   kind: ProjectKind
   parent_project_id: string | null
   chapter_order: number | null
+  chat_role?: ChatRole
   source_idea_ids: string[]
   status: ProjectStatus
   created_at: string

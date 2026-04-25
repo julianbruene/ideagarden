@@ -6,7 +6,7 @@ import Link from 'next/link'
 import NavBar from '@/components/NavBar'
 import ProjectOutline from '@/components/ProjectOutline'
 import IdeaChat from '@/components/IdeaChat'
-import type { Project, Input } from '@/lib/types'
+import type { Project, Input, ChatRole } from '@/lib/types'
 
 interface Props {
   project: Project
@@ -28,6 +28,18 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<ActiveTab>('outline')
   const [chatOpen, setChatOpen] = useState(false)
+  const [chatRole, setChatRole] = useState<ChatRole>((project.chat_role as ChatRole) ?? 'sparring')
+
+  async function changeChatRole(role: ChatRole) {
+    if (role === chatRole) return
+    setChatRole(role)
+    setProject((p) => ({ ...p, chat_role: role }))
+    await fetch(`/api/projects/${project.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_role: role }),
+    })
+  }
   const titleRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -330,19 +342,48 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
         } ${
           chatOpen ? 'md:flex md:w-1/3' : 'md:hidden'
         }`}>
-          <div className="flex-shrink-0 px-4 py-2 border-b border-garden-hairline-soft bg-garden-surface/60 flex items-center justify-between">
-            <p className="font-mono micro-caps text-garden-accent">KI-Chat</p>
-            <button
-              onClick={() => setChatOpen(false)}
-              className="hidden md:flex font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors items-center gap-1"
-              title="Schließen"
-            >
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-              Schließen
-            </button>
+          <div className="flex-shrink-0 px-4 py-2 border-b border-garden-hairline-soft bg-garden-surface/60">
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-mono micro-caps text-garden-accent">KI-Chat</p>
+              <button
+                onClick={() => setChatOpen(false)}
+                className="hidden md:flex font-mono micro-caps text-garden-muted-soft hover:text-garden-ink transition-colors items-center gap-1"
+                title="Schließen"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            {/* Role selector — three pills */}
+            <div className="mt-2 flex items-center gap-1">
+              {([
+                { key: 'sparring',   label: 'Sparring' },
+                { key: 'researcher', label: 'Recherche' },
+                { key: 'editor',     label: 'Lektor' },
+              ] as { key: ChatRole; label: string }[]).map(({ key, label }) => {
+                const active = chatRole === key
+                return (
+                  <button
+                    key={key}
+                    onClick={() => changeChatRole(key)}
+                    className={`font-mono micro-caps px-2.5 py-1 rounded transition-colors ${
+                      active
+                        ? 'bg-garden-accent-soft text-garden-accent-deep'
+                        : 'text-garden-muted-soft hover:text-garden-ink'
+                    }`}
+                    title={
+                      key === 'sparring' ? 'Stellt eine scharfe Frage, treibt das Denken weiter'
+                      : key === 'researcher' ? 'Hilft bei Recherche, erklärt Konzepte, zeigt Lücken'
+                      : 'Schärft den Text, markiert Wiederholungen, schlägt Kürzungen vor'
+                    }
+                  >
+                    {label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
           <IdeaChat
             ideaId={project.id}

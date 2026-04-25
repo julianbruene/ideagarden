@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { anthropic, MODEL, CHAT_SYSTEM } from '@/lib/anthropic'
+import { anthropic, MODEL, chatSystemPrompt } from '@/lib/anthropic'
+import type { ChatRole } from '@/lib/types'
 
 export const maxDuration = 30
 
@@ -16,7 +17,7 @@ export async function POST(req: Request, { params }: Params) {
 
   // Fetch project + full input history
   const [{ data: project }, { data: history }] = await Promise.all([
-    supabase.from('projects').select('title').eq('id', id).single(),
+    supabase.from('projects').select('title, chat_role').eq('id', id).single(),
     supabase
       .from('inputs')
       .select('role, content, is_note, image_transcript')
@@ -60,7 +61,11 @@ export async function POST(req: Request, { params }: Params) {
         const claudeStream = anthropic.messages.stream({
           model: MODEL,
           max_tokens: 400,
-          system: CHAT_SYSTEM(project?.title ?? null, null, 'project'),
+          system: chatSystemPrompt(
+            (project?.chat_role as ChatRole) ?? 'sparring',
+            project?.title ?? null,
+            'project',
+          ),
           messages,
         })
 
