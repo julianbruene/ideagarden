@@ -451,7 +451,17 @@ export default function ProjectOutline({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content, is_section: isSection }),
     })
-    if (!res.ok) return null
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      const errMsg = data?.error ?? `HTTP ${res.status}`
+      console.error('[saveItem] failed:', errMsg)
+      alert(
+        isSection
+          ? `Abschnitt anlegen fehlgeschlagen: ${errMsg}\n\nFalls "is_section column does not exist" — Migration in Supabase ausführen:\nALTER TABLE inputs ADD COLUMN IF NOT EXISTS is_section BOOLEAN NOT NULL DEFAULT FALSE;`
+          : `Note anlegen fehlgeschlagen: ${errMsg}`,
+      )
+      return null
+    }
     const { input } = await res.json()
     if (!input) return null
     await fetch(`/api/inputs/${input.id}`, {
@@ -693,20 +703,20 @@ export default function ProjectOutline({
       <div className="flex-shrink-0 border-t border-garden-hairline bg-garden-surface px-3 py-3">
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileInput} />
 
-        {/* Add Section button */}
-        <div className="flex items-center justify-end mb-2">
-          <button
-            onClick={handleAddSection}
-            disabled={creatingSection}
-            className="font-mono micro-caps text-garden-muted-soft hover:text-garden-accent transition-colors flex items-center gap-1 disabled:opacity-40"
-            title="Abschnitt hinzufügen"
-          >
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-            </svg>
-            Abschnitt
-          </button>
-        </div>
+        {/* Add Section — prominent button at top of add-bar */}
+        <button
+          onClick={handleAddSection}
+          disabled={creatingSection}
+          className="w-full mb-2 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-dashed border-garden-accent/40 text-garden-accent hover:bg-garden-accent-soft transition-colors disabled:opacity-40"
+          title="Abschnitt einziehen"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          <span className="font-mono micro-caps">
+            {creatingSection ? 'Lege an…' : 'Abschnitt einziehen'}
+          </span>
+        </button>
 
         <form onSubmit={handleSubmit}>
           <div className="bg-garden-bg rounded-xl border border-garden-hairline focus-within:border-garden-accent/50 focus-within:ring-2 focus-within:ring-garden-accent/10 transition-all">
