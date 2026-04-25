@@ -36,11 +36,16 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: '/icon-192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-      { url: '/icon.svg', type: 'image/svg+xml' },
+      { url: '/logo-assets/mark.svg', type: 'image/svg+xml' },
+      { url: '/logo-assets/favicon-16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/logo-assets/favicon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/logo-assets/favicon-192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/logo-assets/favicon-512.png', sizes: '512x512', type: 'image/png' },
     ],
-    apple: '/apple-touch-icon.png',
+    apple: '/logo-assets/apple-touch-icon.png',
+  },
+  openGraph: {
+    images: '/logo-assets/og-image.png',
   },
 }
 
@@ -48,7 +53,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#FAF8F4',
+  themeColor: '#E6734E',
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -80,7 +80,7 @@ export default async function KompostPage() {
 
   return (
     <div className="min-h-screen bg-garden-bg pb-24 md:pb-0 md:pl-60">
-      <header className="px-6 md:px-12 pt-8 md:pt-10 pb-6 md:pb-8 pt-safe border-b border-garden-hairline">
+      <header className="px-6 md:px-12 pt-12 md:pt-10 pb-6 md:pb-8 pt-safe border-b border-garden-hairline">
         <div className="flex items-center gap-3 mb-3">
           <span className="font-mono micro-caps text-garden-muted-soft">04 · Kompost</span>
           <span className="h-px flex-1 bg-garden-hairline" />

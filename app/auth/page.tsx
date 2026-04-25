@@ -44,13 +44,26 @@ export default function AuthPage() {
   return (
     <div className="min-h-screen bg-garden-bg flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm">
-        {/* Logo */}
+        {/* Logo: italic & with coral dot */}
         <div className="text-center mb-12">
-          <h1 className="font-display text-4xl text-garden-text tracking-tight" style={{ fontWeight: 500 }}>
-            Idea Garden
+          <div className="relative inline-block mb-3" style={{ width: 80, height: 80 }}>
+            <span
+              className="font-display absolute inset-0 flex items-center justify-center text-garden-ink"
+              style={{ fontStyle: 'italic', fontWeight: 500, fontSize: 88, lineHeight: 1, letterSpacing: '-0.02em' }}
+            >&amp;</span>
+            <span
+              className="absolute rounded-full bg-garden-accent"
+              style={{ width: 14, height: 14, top: 6, right: 0 }}
+            />
+          </div>
+          <h1
+            className="font-display display-tight text-garden-ink"
+            style={{ fontSize: 32, fontWeight: 500, lineHeight: 1.05 }}
+          >
+            Idea <em className="text-garden-accent" style={{ fontStyle: 'italic' }}>Garden</em>
           </h1>
-          <p className="font-serif text-garden-muted text-sm mt-2 italic">
-            Where raw thoughts grow into something usable.
+          <p className="font-display italic text-garden-muted text-sm mt-3">
+            Ein Ort, an dem Ideen wachsen.
           </p>
         </div>
 

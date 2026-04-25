@@ -27,11 +27,24 @@ export default function Sidebar() {
       {/* Brand */}
       <div className="px-6 pt-6 pb-8">
         <Link href="/dump" className="block">
-          <span className="font-display display-tight text-[22px] leading-none text-garden-ink" style={{ fontWeight: 500 }}>
-            Idea <em className="text-garden-accent" style={{ fontStyle: 'italic' }}>Garden</em>
+          <span className="flex items-baseline gap-2">
+            {/* Mark: italic & + coral dot */}
+            <span className="relative inline-block" style={{ width: 28, height: 28 }}>
+              <span
+                className="font-display absolute inset-0 flex items-center justify-center text-garden-ink"
+                style={{ fontStyle: 'italic', fontWeight: 500, fontSize: 30, lineHeight: 1, letterSpacing: '-0.02em' }}
+              >&amp;</span>
+              <span
+                className="absolute rounded-full bg-garden-accent"
+                style={{ width: 5, height: 5, top: 2, right: 0 }}
+              />
+            </span>
+            <span className="font-display display-tight text-[20px] leading-none text-garden-ink" style={{ fontWeight: 500 }}>
+              Idea <em className="text-garden-accent" style={{ fontStyle: 'italic' }}>Garden</em>
+            </span>
           </span>
         </Link>
-        <div className="font-mono micro-caps mt-1 text-garden-muted-soft">v 0.3</div>
+        <div className="font-mono micro-caps mt-2 text-garden-muted-soft">v 0.3</div>
       </div>
 
       {/* Tabs */}
