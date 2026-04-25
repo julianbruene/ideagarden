@@ -42,6 +42,7 @@ export interface Input {
   mirror_source_id?: string | null
   outline_order?: number | null
   used?: boolean
+  chat_role?: ChatRole | null
   created_at: string
 }
 

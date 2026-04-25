@@ -356,7 +356,7 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
                 </svg>
               </button>
             </div>
-            {/* Role selector — three pills */}
+            {/* Role selector — three pills with message counts */}
             <div className="mt-2 flex items-center gap-1">
               {([
                 { key: 'sparring',   label: 'Sparring' },
@@ -364,22 +364,30 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
                 { key: 'editor',     label: 'Lektor' },
               ] as { key: ChatRole; label: string }[]).map(({ key, label }) => {
                 const active = chatRole === key
+                const count = inputs.filter(
+                  (i) => i.chat_role === key && i.is_note !== true && i.role === 'assistant',
+                ).length
                 return (
                   <button
                     key={key}
                     onClick={() => changeChatRole(key)}
-                    className={`font-mono micro-caps px-2.5 py-1 rounded transition-colors ${
+                    className={`font-mono micro-caps px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 ${
                       active
                         ? 'bg-garden-accent-soft text-garden-accent-deep'
                         : 'text-garden-muted-soft hover:text-garden-ink'
                     }`}
                     title={
-                      key === 'sparring' ? 'Stellt eine scharfe Frage, treibt das Denken weiter'
-                      : key === 'researcher' ? 'Hilft bei Recherche, erklärt Konzepte, zeigt Lücken'
-                      : 'Schärft den Text, markiert Wiederholungen, schlägt Kürzungen vor'
+                      key === 'sparring' ? 'Stellt eine scharfe Frage, treibt das Denken weiter — sieht nur Kernidee + Outline'
+                      : key === 'researcher' ? 'Hilft bei Recherche, erklärt Konzepte, zeigt Lücken — sieht nur Kernidee + Outline'
+                      : 'Schärft den geschriebenen Text — sieht Kernidee + Outline + den Text'
                     }
                   >
                     {label}
+                    {count > 0 && (
+                      <span className={`tabnums text-[9px] ${active ? 'text-garden-accent-deep' : 'text-garden-muted-soft'}`}>
+                        {count}
+                      </span>
+                    )}
                   </button>
                 )
               })}
@@ -388,6 +396,7 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
           <IdeaChat
             ideaId={project.id}
             chatEndpoint={`/api/projects/${project.id}/chat`}
+            chatRole={chatRole}
             allInputs={inputs}
             onMessageAdded={setInputs}
           />

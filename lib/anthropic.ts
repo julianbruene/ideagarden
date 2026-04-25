@@ -90,19 +90,102 @@ Was du nie tust:
 
 Immer auf Deutsch.`
 
-export function chatSystemPrompt(role: ChatRole, title: string | null, kind: 'idea' | 'project' = 'idea'): string {
-  const ctx = CONTEXT_HEADER(title, kind)
-  switch (role) {
-    case 'researcher':
-      return `${ctx}\n\n${RESEARCHER_PROMPT}`
-    case 'editor':
-      return `${ctx}\n\n${EDITOR_PROMPT}`
-    case 'sparring':
-    default:
-      return `${ctx}\n\n${SPARRING_PROMPT}`
-  }
+// ============================================================
+// Context block builder
+// ============================================================
+
+export interface OutlineEntry {
+  is_section: boolean
+  content: string
+  image_transcript?: string | null
+  outline_order?: number | null
 }
 
-// Legacy alias kept for the ideas chat route which always uses sparring
+export interface ChatContext {
+  title: string | null
+  kernidee: string | null
+  outline: OutlineEntry[]
+  writing_content?: string | null
+}
+
+function noteToText(o: OutlineEntry): string {
+  if (o.content.startsWith('[img]')) {
+    return o.image_transcript?.trim()
+      ? `Screenshot: ${o.image_transcript}`
+      : '[Screenshot ohne Text]'
+  }
+  return o.content
+}
+
+/**
+ * Build the AKTUELLER KONTEXT block — kernidee + outline (+ writing for Lektor).
+ * Sparring + Researcher get only the material. Lektor also gets the prose.
+ */
+function buildContextBlock(role: ChatRole, ctx: ChatContext): string {
+  const parts: string[] = []
+
+  if (ctx.kernidee?.trim()) {
+    parts.push(`KERNIDEE:\n${ctx.kernidee.trim()}`)
+  }
+
+  // Notes & sections in outline order
+  const outlineSorted = [...ctx.outline].sort((a, b) => {
+    const ao = a.outline_order ?? Number.MAX_SAFE_INTEGER
+    const bo = b.outline_order ?? Number.MAX_SAFE_INTEGER
+    return ao - bo
+  })
+
+  if (outlineSorted.length > 0) {
+    const lines: string[] = []
+    let noteIndex = 0
+    let sectionIndex = 0
+    for (const o of outlineSorted) {
+      if (o.is_section) {
+        sectionIndex++
+        lines.push(`\n## ${o.content || `Abschnitt ${sectionIndex}`}`)
+      } else {
+        noteIndex++
+        const text = noteToText(o)
+        lines.push(`- ${text}`)
+      }
+    }
+    parts.push(`OUTLINE / NOTES:\n${lines.join('\n').trim()}`)
+  }
+
+  if (role === 'editor' && ctx.writing_content?.trim()) {
+    parts.push(`AKTUELLER TEXT:\n${ctx.writing_content.trim()}`)
+  }
+
+  if (parts.length === 0) {
+    return '(Noch kein Material — Kernidee, Notes und Outline sind leer.)'
+  }
+
+  return parts.join('\n\n')
+}
+
+// ============================================================
+// chatSystemPrompt — full system prompt with role + context
+// ============================================================
+export function chatSystemPrompt(
+  role: ChatRole,
+  ctx: ChatContext,
+  kind: 'idea' | 'project' = 'project',
+): string {
+  const header = CONTEXT_HEADER(ctx.title, kind)
+  const rolePrompt =
+    role === 'researcher' ? RESEARCHER_PROMPT
+    : role === 'editor'   ? EDITOR_PROMPT
+    : SPARRING_PROMPT
+  const contextBlock = buildContextBlock(role, ctx)
+
+  return `${header}\n\n${rolePrompt}\n\n---\nAKTUELLER KONTEXT\n---\n${contextBlock}`
+}
+
+// Legacy: simple sparring prompt without context (used by Garden idea chat which has no kernidee/outline shape)
+export function simpleSparringPrompt(title: string | null, kind: 'idea' | 'project' = 'idea'): string {
+  return `${CONTEXT_HEADER(title, kind)}\n\n${SPARRING_PROMPT}`
+}
+
+// Legacy alias kept for backwards compat (idea chat route)
 export const CHAT_SYSTEM = (title: string | null, _synthesis: string | null, kind: 'idea' | 'project' = 'idea') =>
-  chatSystemPrompt('sparring', title, kind)
+  simpleSparringPrompt(title, kind)

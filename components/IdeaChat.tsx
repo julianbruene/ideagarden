@@ -1,16 +1,17 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import type { Input } from '@/lib/types'
+import type { Input, ChatRole } from '@/lib/types'
 
 interface Props {
   ideaId: string  // container id — idea_id OR project_id
   chatEndpoint?: string  // defaults to /api/ideas/[id]/chat
+  chatRole?: ChatRole  // when set, filter conversation by this role and send it with each message
   allInputs: Input[]
   onMessageAdded: (inputs: Input[]) => void
 }
 
-export default function IdeaChat({ ideaId, chatEndpoint, allInputs, onMessageAdded }: Props) {
+export default function IdeaChat({ ideaId, chatEndpoint, chatRole, allInputs, onMessageAdded }: Props) {
   const endpoint = chatEndpoint ?? `/api/ideas/${ideaId}/chat`
   const [message, setMessage] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -18,13 +19,14 @@ export default function IdeaChat({ ideaId, chatEndpoint, allInputs, onMessageAdd
   const bottomRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Only show chat messages (is_note = false/undefined means it's a chat message or AI response)
-  const conversation = allInputs.filter(
-    (i) => i.role === 'assistant' || i.is_note === false || (!i.is_note && i.role === 'user' && i.is_note !== true)
-  ).filter(
-    // Exclude pure notes (is_note = true)
-    (i) => i.is_note !== true
-  )
+  // Filter to chat messages (exclude notes); when chatRole is set, also filter by role
+  const conversation = allInputs
+    .filter((i) => i.is_note !== true)
+    .filter((i) => {
+      if (!chatRole) return true
+      // Only show messages tagged with the current role
+      return i.chat_role === chatRole
+    })
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -42,6 +44,7 @@ export default function IdeaChat({ ideaId, chatEndpoint, allInputs, onMessageAdd
       content: trimmed,
       role: 'user',
       is_note: false,
+      chat_role: chatRole ?? null,
       created_at: new Date().toISOString(),
     }
 
@@ -55,7 +58,7 @@ export default function IdeaChat({ ideaId, chatEndpoint, allInputs, onMessageAdd
       const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({ message: trimmed, role: chatRole }),
       })
 
       if (!res.ok || !res.body) throw new Error('Failed')
@@ -88,6 +91,7 @@ export default function IdeaChat({ ideaId, chatEndpoint, allInputs, onMessageAdd
         content: fullText,
         role: 'assistant',
         is_note: false,
+        chat_role: chatRole ?? null,
         created_at: new Date().toISOString(),
       }
       onMessageAdded([...withUser, aiMsg])
