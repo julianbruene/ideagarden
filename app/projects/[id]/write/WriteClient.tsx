@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import type { Project, Input } from '@/lib/types'
@@ -26,7 +25,7 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
   const [content, setContent] = useState(initialProject.writing_content ?? '')
   const [kernidee, setKernidee] = useState(initialProject.kernidee ?? '')
   const [panelOpen, setPanelOpen] = useState(false)
-  const [completing, setCompleting] = useState(false)
+  const [savingState, setSavingState] = useState<'idle' | 'saving' | 'saved'>('idle')
   const [expandedNote, setExpandedNote] = useState<string | null>(null)
   const [notesState, setNotesState] = useState<Input[]>(notes)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
@@ -76,7 +75,6 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
     kernidee: initialProject.kernidee ?? '',
   })
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const router = useRouter()
 
   const save = useCallback(async () => {
     if (
@@ -119,43 +117,20 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
     return () => window.removeEventListener('beforeunload', handler)
   }, [save])
 
-  async function handleDone() {
-    if (completing) return
-    const isChapter = !!initialProject.parent_project_id
-    const what = isChapter ? 'Kapitel' : 'Projekt'
-    const confirmed = window.confirm(
-      isChapter
-        ? `${what} als fertig markieren? Es wird im Buch als fertig markiert.`
-        : `${what} als fertig markieren? Wird als Markdown heruntergeladen und ins Archiv verschoben.`
-    )
-    if (!confirmed) return
-    setCompleting(true)
-
+  async function handleManualSave() {
+    if (savingState === 'saving') return
     if (saveTimer.current) clearTimeout(saveTimer.current)
-    await save()
-
-    if (!isChapter) {
-      const mdRes = await fetch(`/api/projects/${initialProject.id}/export`)
-      const { markdown } = await mdRes.json()
-      const blob = new Blob([markdown], { type: 'text/markdown' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${(title.trim() || 'projekt').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
-      a.click()
-      URL.revokeObjectURL(url)
-    }
-
-    await fetch(`/api/projects/${initialProject.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
-    })
-
-    if (isChapter && initialProject.parent_project_id) {
-      router.push(`/projects/${initialProject.parent_project_id}`)
-    } else {
-      router.push('/done')
+    setSavingState('saving')
+    try {
+      // Force-save by clearing the snapshot cache so save() fires even if
+      // the autosave already wrote the same value.
+      lastSaved.current = { title: '__force', content: '__force', kernidee: '__force' }
+      await save()
+      setSavingState('saved')
+      setTimeout(() => setSavingState('idle'), 2000)
+    } catch (e) {
+      console.error('Manual save failed:', e)
+      setSavingState('idle')
     }
   }
 
@@ -441,18 +416,36 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
               })()}
 
               <button
-                onClick={handleDone}
-                disabled={completing}
-                className="w-full text-xs text-garden-muted hover:text-garden-accent transition-colors flex items-center justify-center gap-1.5 py-2 rounded-lg hover:bg-garden-accent-soft disabled:opacity-40"
+                onClick={handleManualSave}
+                disabled={savingState === 'saving'}
+                className={`w-full text-xs transition-colors flex items-center justify-center gap-1.5 py-2 rounded-lg disabled:opacity-40 ${
+                  savingState === 'saved'
+                    ? 'text-garden-accent bg-garden-accent-soft'
+                    : 'text-garden-muted hover:text-garden-ink hover:bg-garden-hairline-soft'
+                }`}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12"/>
-                </svg>
-                {completing
-                  ? 'Wird abgeschlossen…'
-                  : initialProject.parent_project_id
-                    ? 'Kapitel abschließen'
-                    : 'Projekt abschließen & exportieren'}
+                {savingState === 'saving' ? (
+                  <>
+                    <span className="w-3 h-3 border-2 border-garden-muted border-t-transparent rounded-full animate-spin" />
+                    Speichere…
+                  </>
+                ) : savingState === 'saved' ? (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                    Gespeichert
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
+                      <polyline points="17 21 17 13 7 13 7 21"/>
+                      <polyline points="7 3 7 8 15 8"/>
+                    </svg>
+                    Speichern
+                  </>
+                )}
               </button>
             </div>
           </aside>
