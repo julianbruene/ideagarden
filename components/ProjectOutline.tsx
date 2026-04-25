@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react'
 import Image from 'next/image'
 import {
   DndContext,
@@ -32,6 +32,10 @@ interface Props {
   onNoteRemoved: (id: string) => void
   onNoteUpdated: (note: Input) => void
   onNotesReordered: (notes: Input[]) => void
+}
+
+export interface ProjectOutlineHandle {
+  addSection: () => void
 }
 
 function isImageNote(content: string) { return content.startsWith('[img]') }
@@ -351,9 +355,9 @@ function SortableNote({
 /* ------------------------------------------------------------------ */
 /* ProjectOutline                                                     */
 /* ------------------------------------------------------------------ */
-export default function ProjectOutline({
+const ProjectOutline = forwardRef<ProjectOutlineHandle, Props>(function ProjectOutline({
   projectId, notes, onNoteAdded, onNoteRemoved, onNoteUpdated, onNotesReordered,
-}: Props) {
+}, ref) {
   const [text, setText] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -514,6 +518,13 @@ export default function ProjectOutline({
       setEditDraft('')
     }
   }
+
+  // Expose addSection so the parent can trigger it from a header button
+  const addSectionRef = useRef<() => void>(() => {})
+  addSectionRef.current = handleAddSection
+  useImperativeHandle(ref, () => ({
+    addSection: () => addSectionRef.current(),
+  }), [])
 
   async function handleImageFile(file: File) {
     if (!file.type.startsWith('image/')) return
@@ -745,21 +756,6 @@ export default function ProjectOutline({
       <div className="flex-shrink-0 border-t border-garden-hairline bg-garden-surface px-3 py-3">
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileInput} />
 
-        {/* Add Section — prominent button at top of add-bar */}
-        <button
-          onClick={handleAddSection}
-          disabled={creatingSection}
-          className="w-full mb-2 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-dashed border-garden-accent/40 text-garden-accent hover:bg-garden-accent-soft transition-colors disabled:opacity-40"
-          title="Abschnitt einziehen"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          <span className="font-mono micro-caps">
-            {creatingSection ? 'Lege an…' : 'Abschnitt einziehen'}
-          </span>
-        </button>
-
         <form onSubmit={handleSubmit}>
           <div className="bg-garden-bg rounded-xl border border-garden-hairline focus-within:border-garden-accent/50 focus-within:ring-2 focus-within:ring-garden-accent/10 transition-all">
             <textarea
@@ -817,7 +813,9 @@ export default function ProjectOutline({
       )}
     </div>
   )
-}
+})
+
+export default ProjectOutline
 
 /* Hidden sortable placeholder — keeps collapsed children inside dnd context */
 function HiddenSortable({ id }: { id: string }) {

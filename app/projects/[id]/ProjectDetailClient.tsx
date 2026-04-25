@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import NavBar from '@/components/NavBar'
-import ProjectOutline from '@/components/ProjectOutline'
+import ProjectOutline, { type ProjectOutlineHandle } from '@/components/ProjectOutline'
 import IdeaChat from '@/components/IdeaChat'
 import type { Project, Input, ChatRole } from '@/lib/types'
 
@@ -41,6 +41,7 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
     })
   }
   const titleRef = useRef<HTMLInputElement>(null)
+  const outlineRef = useRef<ProjectOutlineHandle>(null)
   const router = useRouter()
 
   const isChapter = !!project.parent_project_id
@@ -306,9 +307,21 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
             </div>
           </div>
 
-          {/* Outline label + open-chat toggle */}
+          {/* Outline label + add-section + open-chat toggle */}
           <div className="flex-shrink-0 px-4 md:px-6 py-2 border-b border-garden-hairline-soft bg-garden-surface/60 flex items-center justify-between">
-            <p className="font-mono micro-caps text-garden-accent">Outline</p>
+            <div className="flex items-center gap-2">
+              <p className="font-mono micro-caps text-garden-accent">Outline</p>
+              <button
+                onClick={() => outlineRef.current?.addSection()}
+                title="Abschnitt einziehen"
+                className="p-0.5 rounded text-garden-muted-soft hover:text-garden-accent hover:bg-garden-accent-soft transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </button>
+            </div>
             {!chatOpen && (
               <button
                 onClick={() => setChatOpen(true)}
@@ -324,6 +337,7 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
           </div>
 
           <ProjectOutline
+            ref={outlineRef}
             projectId={project.id}
             notes={inputs}
             onNoteAdded={(note) => setInputs((prev) => [...prev, note])}
