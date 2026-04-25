@@ -39,15 +39,13 @@ export async function POST(req: Request) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // If created from ideas, seed with their content and synthesis
+  // If created from ideas, seed with the source ideas' notes
   if (source_idea_ids.length > 0) {
-    // Fetch source ideas
     const { data: ideas } = await supabase
       .from('ideas')
-      .select('id, title, synthesis')
+      .select('id, title')
       .in('id', source_idea_ids)
 
-    // Fetch all notes (inputs with is_note=true) from those ideas
     const { data: sourceNotes } = await supabase
       .from('inputs')
       .select('content, image_transcript')
@@ -58,7 +56,6 @@ export async function POST(req: Request) {
 
     for (const idea of ideas ?? []) {
       if (idea.title) seedParts.push(`## ${idea.title}`)
-      if (idea.synthesis) seedParts.push(idea.synthesis)
     }
 
     for (const n of sourceNotes ?? []) {

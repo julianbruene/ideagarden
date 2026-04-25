@@ -19,10 +19,7 @@ export default function IdeaCard({ idea, inputCount = 0 }: Props) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const title = idea.title || idea.synthesis?.slice(0, 60) || 'Unbenannte Idee'
-  const snippet = idea.synthesis
-    ? idea.synthesis.slice(0, 120) + (idea.synthesis.length > 120 ? '…' : '')
-    : null
+  const title = idea.title || 'Unbenannte Idee'
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault()
@@ -136,17 +133,9 @@ export default function IdeaCard({ idea, inputCount = 0 }: Props) {
           Idee
         </p>
 
-        <h3 className="font-display text-lg text-garden-text leading-snug mb-2 line-clamp-2" style={{ fontWeight: 500 }}>
+        <h3 className="font-display text-xl text-garden-text leading-snug mb-6 line-clamp-3" style={{ fontWeight: 500 }}>
           {title}
         </h3>
-
-        {snippet ? (
-          <p className="font-serif text-[13px] text-garden-muted leading-relaxed line-clamp-3 mb-4" style={{ fontWeight: 400 }}>
-            {snippet}
-          </p>
-        ) : (
-          <p className="text-xs text-garden-muted-soft italic mb-4">Noch keine Synthese</p>
-        )}
 
         <div className="flex items-center justify-between pt-3 border-t border-dashed border-garden-border">
           <span className="text-[10px] text-garden-muted-soft tracking-wide">{formatDate(idea.created_at)}</span>

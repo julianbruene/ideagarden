@@ -40,13 +40,6 @@ export async function GET(_req: Request, { params }: Params) {
   lines.push(`*Completed: ${completedDate}*`)
   lines.push('')
 
-  if (idea.synthesis) {
-    lines.push('## Synthesis')
-    lines.push('')
-    lines.push(idea.synthesis)
-    lines.push('')
-  }
-
   lines.push('## Notes')
   lines.push('')
 

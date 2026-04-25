@@ -16,7 +16,7 @@ export async function POST(req: Request, { params }: Params) {
 
   // Fetch project + full input history
   const [{ data: project }, { data: history }] = await Promise.all([
-    supabase.from('projects').select('title, synthesis').eq('id', id).single(),
+    supabase.from('projects').select('title').eq('id', id).single(),
     supabase
       .from('inputs')
       .select('role, content, is_note, image_transcript')
@@ -60,7 +60,7 @@ export async function POST(req: Request, { params }: Params) {
         const claudeStream = anthropic.messages.stream({
           model: MODEL,
           max_tokens: 400,
-          system: CHAT_SYSTEM(project?.title ?? null, project?.synthesis ?? null, 'project'),
+          system: CHAT_SYSTEM(project?.title ?? null, null, 'project'),
           messages,
         })
 

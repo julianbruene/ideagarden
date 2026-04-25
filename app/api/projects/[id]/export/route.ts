@@ -39,13 +39,6 @@ export async function GET(_req: Request, { params }: Params) {
   lines.push(`*Abgeschlossen: ${completedDate}*`)
   lines.push('')
 
-  if (project.synthesis) {
-    lines.push('## Synthese')
-    lines.push('')
-    lines.push(project.synthesis)
-    lines.push('')
-  }
-
   if (project.outline) {
     lines.push('## Gliederung')
     lines.push('')

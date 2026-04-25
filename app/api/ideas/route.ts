@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { anthropic, MODEL, SYNTHESIS_SYSTEM } from '@/lib/anthropic'
 
 export async function GET() {
   const supabase = await createClient()
@@ -48,7 +47,6 @@ export async function POST(req: Request) {
 
     for (const n of sourceNodes ?? []) {
       if (n.content_type === 'image' && n.image_url) {
-        // Store image notes using the same [img] convention as IdeaNotes
         sourceContents.push(`[img]${n.image_url}`)
       } else if (n.content) {
         sourceContents.push(n.content)
@@ -67,11 +65,11 @@ export async function POST(req: Request) {
     sourceContents.push(initial_content)
   }
 
-  // If we have seed content, create the first user input and generate synthesis
+  // Insert seed content as the first note
   if (sourceContents.length > 0) {
     const seedText = sourceContents.join('\n\n---\n\n')
 
-    const { data: insertedInput, error: inputError } = await supabase
+    const { error: inputError } = await supabase
       .from('inputs')
       .insert({
         idea_id: idea.id,
@@ -80,28 +78,9 @@ export async function POST(req: Request) {
         role: 'user',
         is_note: true,
       })
-      .select()
-      .single()
 
     if (inputError) {
       console.error('Seed input insert failed:', inputError.message)
-    }
-
-    // Generate initial synthesis
-    try {
-      const msg = await anthropic.messages.create({
-        model: MODEL,
-        max_tokens: 200,
-        system: SYNTHESIS_SYSTEM,
-        messages: [{ role: 'user', content: seedText }],
-      })
-      const synthesis = msg.content[0].type === 'text' ? msg.content[0].text : null
-      if (synthesis) {
-        await supabase.from('ideas').update({ synthesis }).eq('id', idea.id)
-        idea.synthesis = synthesis
-      }
-    } catch (e) {
-      console.error('Synthesis failed:', e)
     }
   }
 

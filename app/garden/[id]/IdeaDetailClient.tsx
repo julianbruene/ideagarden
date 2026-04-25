@@ -24,8 +24,6 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
   const [promoting, setPromoting] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<ActiveTab>('notes')
-  const [synthLoading, setSynthLoading] = useState(false)
-  const [synthOpen, setSynthOpen] = useState(!!idea.synthesis)
   const titleRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -39,18 +37,6 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: trimmed }),
     })
-  }
-
-  async function handleGenerateSynthesis() {
-    if (synthLoading) return
-    setSynthLoading(true)
-    const res = await fetch(`/api/ideas/${idea.id}/synthesis`, { method: 'POST' })
-    const { synthesis } = await res.json()
-    if (synthesis) {
-      setIdea((i) => ({ ...i, synthesis }))
-      setSynthOpen(true)
-    }
-    setSynthLoading(false)
   }
 
   async function handleDelete() {
@@ -71,7 +57,7 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
   async function handlePromoteToProject() {
     if (promoting) return
     const confirmed = window.confirm(
-      'Diese Idee in ein Projekt verwandeln? Notes und Synthese werden übernommen, die Idee bleibt bestehen.'
+      'Diese Idee in ein Projekt verwandeln? Die Notes werden übernommen, die Idee bleibt bestehen.'
     )
     if (!confirmed) return
     setPromoting(true)
@@ -283,68 +269,6 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
             onMessageAdded={setInputs}
           />
         </div>
-      </div>
-
-      {/* ── Synthesis — collapsible bar at bottom ── */}
-      <div className="flex-shrink-0 border-t border-garden-border bg-garden-surface">
-        {/* Header row — always visible */}
-        <div className="flex items-center gap-3 px-4 py-2.5">
-          <button
-            onClick={handleGenerateSynthesis}
-            disabled={synthLoading}
-            className="flex-shrink-0 flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl bg-garden-accent-light text-garden-accent border border-garden-accent/20 font-medium hover:bg-garden-accent/10 transition-colors disabled:opacity-50"
-          >
-            {synthLoading ? (
-              <span className="w-3 h-3 border-2 border-garden-accent border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-              </svg>
-            )}
-            Synthese
-          </button>
-
-          {/* Toggle expand, only if there's a synthesis */}
-          {idea.synthesis && (
-            <button
-              onClick={() => setSynthOpen((v) => !v)}
-              className="flex items-center gap-1.5 flex-1 min-w-0 text-left group"
-            >
-              {/* Preview when collapsed */}
-              {!synthOpen && (
-                <p className="text-xs text-garden-muted truncate flex-1">
-                  {idea.synthesis}
-                </p>
-              )}
-              {synthOpen && (
-                <p className="text-xs text-garden-muted flex-1">Synthese verbergen</p>
-              )}
-              <svg
-                width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
-                className={`flex-shrink-0 text-garden-muted transition-transform ${synthOpen ? 'rotate-180' : ''}`}
-              >
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
-            </button>
-          )}
-
-          {!idea.synthesis && (
-            <p className="text-xs text-garden-muted/50 italic">
-              Noch keine Synthese.
-            </p>
-          )}
-        </div>
-
-        {/* Expanded synthesis text */}
-        {synthOpen && idea.synthesis && (
-          <div className="px-4 pb-3">
-            <p className="text-sm text-garden-text leading-relaxed bg-garden-accent-light rounded-xl px-4 py-3">
-              {idea.synthesis}
-            </p>
-          </div>
-        )}
       </div>
 
       <NavBar />
