@@ -27,6 +27,7 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
   const [completing, setCompleting] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<ActiveTab>('outline')
+  const [chatOpen, setChatOpen] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
@@ -247,30 +248,13 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
         </div>
       </header>
 
-      {/* ── Kernidee bar — always visible, always editable ── */}
-      <div className="flex-shrink-0 bg-garden-surface border-b border-garden-border/60 px-4 md:px-6 py-2.5">
-        <div className="max-w-3xl">
-          <label className="text-[9px] uppercase tracking-widest text-garden-muted-soft font-medium block mb-1">
-            Kernidee
-          </label>
-          <textarea
-            value={kernideeDraft}
-            onChange={(e) => setKernideeDraft(e.target.value)}
-            placeholder="Welcher eine Gedanke trägt diesen Text?"
-            rows={1}
-            className="w-full bg-transparent font-serif text-sm md:text-base text-garden-text outline-none placeholder:text-garden-muted-soft/60 resize-none leading-relaxed"
-            style={{ fontStyle: kernideeDraft ? 'normal' : 'italic' }}
-          />
-        </div>
-      </div>
-
       {/* ── Mobile tabs ── */}
-      <div className="flex-shrink-0 flex md:hidden border-b border-garden-border bg-garden-surface">
+      <div className="flex-shrink-0 flex md:hidden border-b border-garden-hairline bg-garden-surface">
         {(['outline', 'chat'] as ActiveTab[]).map((tab) => (
           <button
             key={tab}
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
+            className={`flex-1 py-2.5 font-mono micro-caps transition-colors ${
               activeTab === tab
                 ? 'text-garden-accent border-b-2 border-garden-accent'
                 : 'text-garden-muted'
@@ -284,13 +268,49 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
       {/* ── Main panels ── */}
       <div className="flex-1 flex min-h-0 overflow-hidden max-w-7xl w-full mx-auto">
 
-        {/* Left: Outline */}
-        <div className={`flex flex-col w-full md:w-1/2 md:border-r border-garden-border min-h-0 ${
+        {/* LEFT: Kernidee + Outline */}
+        <div className={`flex flex-col min-h-0 ${
           activeTab === 'outline' ? 'flex' : 'hidden md:flex'
+        } ${
+          chatOpen ? 'w-full md:w-2/3 md:border-r border-garden-hairline' : 'w-full'
         }`}>
-          <div className="flex-shrink-0 px-4 py-2 border-b border-garden-border/50 bg-garden-surface/60">
-            <p className="text-[10px] uppercase tracking-widest text-garden-muted font-medium">Outline</p>
+
+          {/* Kernidee — centered above outline */}
+          <div className="flex-shrink-0 px-4 md:px-8 pt-4 md:pt-6 pb-3 md:pb-4 border-b border-garden-hairline bg-garden-surface">
+            <div className="max-w-2xl mx-auto">
+              <p className="font-mono micro-caps text-garden-accent mb-1.5 text-center">Kernidee</p>
+              <textarea
+                value={kernideeDraft}
+                onChange={(e) => setKernideeDraft(e.target.value)}
+                placeholder="Welcher eine Gedanke trägt diesen Text?"
+                rows={1}
+                className="w-full bg-transparent font-display text-garden-ink outline-none placeholder:text-garden-muted-soft/60 resize-none leading-relaxed text-center"
+                style={{
+                  fontSize: 17,
+                  fontStyle: kernideeDraft ? 'italic' : 'italic',
+                  fontWeight: 400,
+                }}
+              />
+            </div>
           </div>
+
+          {/* Outline label + open-chat toggle */}
+          <div className="flex-shrink-0 px-4 md:px-6 py-2 border-b border-garden-hairline-soft bg-garden-surface/60 flex items-center justify-between">
+            <p className="font-mono micro-caps text-garden-accent">Outline</p>
+            {!chatOpen && (
+              <button
+                onClick={() => setChatOpen(true)}
+                className="hidden md:flex font-mono micro-caps text-garden-muted hover:text-garden-accent transition-colors items-center gap-1"
+                title="KI-Chat öffnen"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                </svg>
+                KI-Chat
+              </button>
+            )}
+          </div>
+
           <ProjectOutline
             projectId={project.id}
             notes={inputs}
@@ -304,12 +324,25 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
           />
         </div>
 
-        {/* Right: Chat */}
-        <div className={`flex flex-col w-full md:w-1/2 min-h-0 ${
-          activeTab === 'chat' ? 'flex' : 'hidden md:flex'
+        {/* RIGHT: Chat — collapsible, ~1/3 on desktop */}
+        <div className={`flex flex-col min-h-0 ${
+          activeTab === 'chat' ? 'flex w-full' : 'hidden'
+        } ${
+          chatOpen ? 'md:flex md:w-1/3' : 'md:hidden'
         }`}>
-          <div className="flex-shrink-0 px-4 py-2 border-b border-garden-border/50 bg-garden-surface/60">
-            <p className="text-[10px] uppercase tracking-widest text-garden-muted font-medium">KI-Chat</p>
+          <div className="flex-shrink-0 px-4 py-2 border-b border-garden-hairline-soft bg-garden-surface/60 flex items-center justify-between">
+            <p className="font-mono micro-caps text-garden-accent">KI-Chat</p>
+            <button
+              onClick={() => setChatOpen(false)}
+              className="hidden md:flex font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors items-center gap-1"
+              title="Schließen"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              Schließen
+            </button>
           </div>
           <IdeaChat
             ideaId={project.id}

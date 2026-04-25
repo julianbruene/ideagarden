@@ -421,12 +421,29 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
               </div>
             </div>
 
-            {/* Footer — finish action */}
-            <div className="flex-shrink-0 border-t border-garden-border/60 px-4 py-3 bg-garden-bg/40">
+            {/* Footer — word count + finish action */}
+            <div className="flex-shrink-0 border-t border-garden-hairline px-4 py-3 bg-garden-bg/40">
+              {/* Word count */}
+              {(() => {
+                const trimmed = content.trim()
+                const words = trimmed === '' ? 0 : trimmed.split(/\s+/).length
+                const chars = content.length
+                const minutes = Math.max(1, Math.round(words / 220))
+                return (
+                  <div className="flex items-center justify-between font-mono text-[10px] text-garden-muted-soft mb-3 pb-3 border-b border-garden-hairline-soft">
+                    <span><span className="tabnums text-garden-ink">{words}</span> {words === 1 ? 'Wort' : 'Wörter'}</span>
+                    <span><span className="tabnums">{chars}</span> Zeichen</span>
+                    {words > 0 && (
+                      <span><span className="tabnums">~{minutes}</span> min Lesezeit</span>
+                    )}
+                  </div>
+                )
+              })()}
+
               <button
                 onClick={handleDone}
                 disabled={completing}
-                className="w-full text-xs text-garden-muted hover:text-garden-seed transition-colors flex items-center justify-center gap-1.5 py-2 rounded-lg hover:bg-garden-seed-light disabled:opacity-40"
+                className="w-full text-xs text-garden-muted hover:text-garden-accent transition-colors flex items-center justify-center gap-1.5 py-2 rounded-lg hover:bg-garden-accent-soft disabled:opacity-40"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="20 6 9 17 4 12"/>

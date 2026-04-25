@@ -35,6 +35,7 @@ export interface Input {
   content: string
   role: InputRole
   is_note?: boolean
+  is_section?: boolean
   starred?: boolean
   image_transcript?: string | null
   mirror_source_id?: string | null
