@@ -1,8 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { usePathname } from 'next/navigation'
 
 const navItems = [
   { href: '/dump',     label: 'Dump' },
@@ -13,14 +12,7 @@ const navItems = [
 
 export default function NavBar() {
   const pathname = usePathname()
-  const router = useRouter()
-
-  async function handleSignOut() {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/auth')
-    router.refresh()
-  }
+  const settingsActive = pathname.startsWith('/settings')
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-garden-bg/92 backdrop-blur-md pb-safe">
@@ -52,19 +44,20 @@ export default function NavBar() {
           )
         })}
 
-        {/* Sign out — small, dezent */}
-        <button
-          onClick={handleSignOut}
-          className="px-3 text-garden-muted-soft hover:text-garden-ink transition-colors"
-          title="Abmelden"
+        {/* Settings — cog icon, dezent */}
+        <Link
+          href="/settings"
+          className={`px-3 transition-colors ${
+            settingsActive ? 'text-garden-ink' : 'text-garden-muted-soft hover:text-garden-ink'
+          }`}
+          title="Einstellungen"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-            <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09a1.65 1.65 0 00-1-1.51 1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09a1.65 1.65 0 001.51-1 1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
           </svg>
-        </button>
+        </Link>
       </div>
     </nav>
   )
