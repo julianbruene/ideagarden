@@ -28,7 +28,7 @@ const CONTEXT_HEADER = (title: string | null, kind: 'idea' | 'project') =>
       : 'Ideen über Zeit wachsen'
   }.${title ? ` Die ${kind === 'project' ? 'Arbeit' : 'Idee'} heißt: "${title}".` : ''}`
 
-const SPARRING_PROMPT = `Du bist Sparring-Partner für sein Denken. Dein Job ist NICHT, Texte zu polieren oder abzuschließen. Dein Job ist es, Ideen wachsen zu lassen.
+export const DEFAULT_SPARRING_PROMPT = `Du bist Sparring-Partner für sein Denken. Dein Job ist NICHT, Texte zu polieren oder abzuschließen. Dein Job ist es, Ideen wachsen zu lassen.
 
 Wie du auftrittst:
 - Wechsle bewusst zwischen zwei Modi — manchmal eine scharfe Frage, manchmal ein kurzes Innehalten
@@ -50,7 +50,7 @@ Der User denkt am besten wenn er laut denkt. Manchmal braucht er eine Frage die 
 
 Immer auf Deutsch.`
 
-const RESEARCHER_PROMPT = `Du bist Recherche-Assistent.
+export const DEFAULT_RESEARCHER_PROMPT = `Du bist Recherche-Assistent.
 
 Dein Job ist es, dem Autor beim Recherchieren und Verstehen zu helfen — nicht, Ideen weiterzudenken oder Texte zu polieren.
 
@@ -70,7 +70,7 @@ Was du nie tust:
 
 Immer auf Deutsch.`
 
-const EDITOR_PROMPT = `Du bist Lektor.
+export const DEFAULT_EDITOR_PROMPT = `Du bist Lektor.
 
 Dein Job ist es, vorhandenen Text zu schärfen — nicht ihn neu zu schreiben oder Ideen weiterzuspinnen.
 
@@ -165,25 +165,35 @@ function buildContextBlock(role: ChatRole, ctx: ChatContext): string {
 
 // ============================================================
 // chatSystemPrompt — full system prompt with role + context
+// Accepts an optional `customRolePrompt` from the user_settings table
+// to override the default role behavior text.
 // ============================================================
 export function chatSystemPrompt(
   role: ChatRole,
   ctx: ChatContext,
   kind: 'idea' | 'project' = 'project',
+  customRolePrompt?: string | null,
 ): string {
   const header = CONTEXT_HEADER(ctx.title, kind)
-  const rolePrompt =
-    role === 'researcher' ? RESEARCHER_PROMPT
-    : role === 'editor'   ? EDITOR_PROMPT
-    : SPARRING_PROMPT
+  const defaultRolePrompt =
+    role === 'researcher' ? DEFAULT_RESEARCHER_PROMPT
+    : role === 'editor'   ? DEFAULT_EDITOR_PROMPT
+    : DEFAULT_SPARRING_PROMPT
+  const rolePrompt = customRolePrompt?.trim() ? customRolePrompt : defaultRolePrompt
   const contextBlock = buildContextBlock(role, ctx)
 
   return `${header}\n\n${rolePrompt}\n\n---\nAKTUELLER KONTEXT\n---\n${contextBlock}`
 }
 
-// Legacy: simple sparring prompt without context (used by Garden idea chat which has no kernidee/outline shape)
-export function simpleSparringPrompt(title: string | null, kind: 'idea' | 'project' = 'idea'): string {
-  return `${CONTEXT_HEADER(title, kind)}\n\n${SPARRING_PROMPT}`
+// Garden idea chat: simpler prompt without outline structure.
+// Also supports a per-user sparring prompt override.
+export function simpleSparringPrompt(
+  title: string | null,
+  kind: 'idea' | 'project' = 'idea',
+  customSparringPrompt?: string | null,
+): string {
+  const rolePrompt = customSparringPrompt?.trim() ? customSparringPrompt : DEFAULT_SPARRING_PROMPT
+  return `${CONTEXT_HEADER(title, kind)}\n\n${rolePrompt}`
 }
 
 // Legacy alias kept for backwards compat (idea chat route)

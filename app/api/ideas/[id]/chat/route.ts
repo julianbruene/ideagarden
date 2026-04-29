@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import { anthropic, MODEL, CHAT_SYSTEM } from '@/lib/anthropic'
+import { anthropic, MODEL, simpleSparringPrompt } from '@/lib/anthropic'
 
 interface Params { params: Promise<{ id: string }> }
 
@@ -12,14 +12,19 @@ export async function POST(req: Request, { params }: Params) {
   const { message } = await req.json()
   if (!message?.trim()) return new Response('message required', { status: 400 })
 
-  // Fetch idea + full input history
-  const [{ data: idea }, { data: history }] = await Promise.all([
+  // Fetch idea + history + user prompt overrides
+  const [{ data: idea }, { data: history }, { data: userSettings }] = await Promise.all([
     supabase.from('ideas').select('title').eq('id', id).single(),
     supabase
       .from('inputs')
       .select('role, content, is_note, image_transcript')
       .eq('idea_id', id)
       .order('created_at', { ascending: true }),
+    supabase
+      .from('user_settings')
+      .select('sparring_prompt')
+      .eq('user_id', user.id)
+      .maybeSingle(),
   ])
 
   // Save user message
@@ -59,7 +64,11 @@ export async function POST(req: Request, { params }: Params) {
         const claudeStream = anthropic.messages.stream({
           model: MODEL,
           max_tokens: 400,
-          system: CHAT_SYSTEM(idea?.title ?? null, null),
+          system: simpleSparringPrompt(
+            idea?.title ?? null,
+            'idea',
+            userSettings?.sparring_prompt ?? null,
+          ),
           messages,
         })
 

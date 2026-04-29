@@ -18,12 +18,19 @@ export async function POST(req: Request, { params }: Params) {
   const message = body.message
   if (!message?.trim()) return new Response('message required', { status: 400 })
 
-  // Fetch project — used for title, kernidee, writing_content, default role
-  const { data: project } = await supabase
-    .from('projects')
-    .select('title, kernidee, writing_content, chat_role')
-    .eq('id', id)
-    .single()
+  // Fetch project + user prompt overrides in parallel
+  const [{ data: project }, { data: userSettings }] = await Promise.all([
+    supabase
+      .from('projects')
+      .select('title, kernidee, writing_content, chat_role')
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('user_settings')
+      .select('sparring_prompt, researcher_prompt, editor_prompt')
+      .eq('user_id', user.id)
+      .maybeSingle(),
+  ])
 
   // Resolve role: client > project > default sparring
   const requestedRole = body.role && (VALID_ROLES as string[]).includes(body.role)
@@ -64,6 +71,11 @@ export async function POST(req: Request, { params }: Params) {
     outline_order: n.outline_order,
   }))
 
+  const customRolePrompt =
+    role === 'sparring'   ? userSettings?.sparring_prompt
+    : role === 'researcher' ? userSettings?.researcher_prompt
+    : userSettings?.editor_prompt
+
   const systemPrompt = chatSystemPrompt(
     role,
     {
@@ -73,6 +85,7 @@ export async function POST(req: Request, { params }: Params) {
       writing_content: role === 'editor' ? (project?.writing_content ?? null) : null,
     },
     'project',
+    customRolePrompt,
   )
 
   const messages: { role: 'user' | 'assistant'; content: string }[] = [

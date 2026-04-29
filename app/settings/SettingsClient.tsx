@@ -4,6 +4,7 @@ import { useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import JSZip from 'jszip'
 import { createClient } from '@/lib/supabase/client'
+import PromptEditor from './PromptEditor'
 
 interface BackupShape {
   version?: string
@@ -392,6 +393,16 @@ export default function SettingsClient() {
             </span>
           </button>
         </div>
+      </section>
+
+      {/* AI Prompts section */}
+      <section>
+        <h2 className="font-mono micro-caps text-garden-accent mb-2">KI-Prompts</h2>
+        <p className="font-serif italic text-garden-muted text-[15px] leading-relaxed mb-6">
+          Drei Rollen, drei Prompts. Pass jede Rolle für deinen Stil an —
+          oder lass sie auf Default. Speichere einzeln, setze einzeln zurück.
+        </p>
+        <PromptEditor />
       </section>
 
       {/* Restore section */}
