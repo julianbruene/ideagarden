@@ -1,7 +1,27 @@
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { anthropic, MODEL, simpleSparringPrompt } from '@/lib/anthropic'
 
 interface Params { params: Promise<{ id: string }> }
+
+// DELETE — wipe the chat history for this idea (notes untouched)
+export async function DELETE(_req: Request, { params }: Params) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Chat messages have is_note != true (false or null in legacy rows).
+  const { error } = await supabase
+    .from('inputs')
+    .delete()
+    .eq('idea_id', id)
+    .eq('user_id', user.id)
+    .not('is_note', 'is', true)
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
 
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params

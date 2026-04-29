@@ -1,3 +1,4 @@
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { anthropic, MODEL, chatSystemPrompt, type OutlineEntry } from '@/lib/anthropic'
 import type { ChatRole } from '@/lib/types'
@@ -7,6 +8,39 @@ export const maxDuration = 30
 interface Params { params: Promise<{ id: string }> }
 
 const VALID_ROLES: ChatRole[] = ['sparring', 'researcher', 'editor']
+
+// DELETE — wipe the chat history for this project.
+// Optional ?role=sparring|researcher|editor → only that role's thread.
+// Without role → all chat messages across all roles (notes are untouched).
+export async function DELETE(req: Request, { params }: Params) {
+  const { id } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const url = new URL(req.url)
+  const roleParam = url.searchParams.get('role')
+  const role = roleParam && (VALID_ROLES as string[]).includes(roleParam)
+    ? (roleParam as ChatRole)
+    : null
+
+  let q = supabase
+    .from('inputs')
+    .delete()
+    .eq('project_id', id)
+    .eq('user_id', user.id)
+
+  if (role) {
+    q = q.eq('chat_role', role)
+  } else {
+    // All chat messages have chat_role set; notes have chat_role NULL
+    q = q.not('chat_role', 'is', null)
+  }
+
+  const { error } = await q
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  return NextResponse.json({ ok: true })
+}
 
 export async function POST(req: Request, { params }: Params) {
   const { id } = await params

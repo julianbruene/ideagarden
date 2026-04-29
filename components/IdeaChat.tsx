@@ -110,6 +110,40 @@ export default function IdeaChat({ ideaId, chatEndpoint, chatRole, allInputs, on
     }
   }
 
+  const [resetting, setResetting] = useState(false)
+  async function handleReset() {
+    if (resetting || streaming) return
+    const roleLabel =
+      chatRole === 'sparring' ? 'Sparring-Chat'
+      : chatRole === 'researcher' ? 'Recherche-Chat'
+      : chatRole === 'editor' ? 'Lektor-Chat'
+      : 'Chat'
+    const confirmed = window.confirm(
+      `${roleLabel} zurücksetzen?\n\nAlle Nachrichten werden gelöscht. Notes und der geschriebene Text bleiben unberührt.`
+    )
+    if (!confirmed) return
+    setResetting(true)
+    try {
+      const url = chatRole ? `${endpoint}?role=${chatRole}` : endpoint
+      const res = await fetch(url, { method: 'DELETE' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        alert(`Reset fehlgeschlagen: ${data.error ?? res.status}`)
+        return
+      }
+      // Local state: keep notes + chat from other roles, drop current role's chat
+      if (chatRole) {
+        onMessageAdded(allInputs.filter((i) => i.is_note === true || i.chat_role !== chatRole))
+      } else {
+        onMessageAdded(allInputs.filter((i) => i.is_note === true))
+      }
+    } catch (e) {
+      alert(`Netzwerkfehler: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setResetting(false)
+    }
+  }
+
   function formatTime(iso: string) {
     return new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
   }
@@ -122,6 +156,25 @@ export default function IdeaChat({ ideaId, chatEndpoint, chatRole, allInputs, on
           <p className="text-xs text-garden-muted/60 text-center py-8 italic">
             Stell der KI eine Frage zu dieser Idee.
           </p>
+        )}
+
+        {/* Reset link — only visible when there are messages */}
+        {conversation.length > 0 && (
+          <div className="flex justify-end -mt-2 mb-1">
+            <button
+              onClick={handleReset}
+              disabled={resetting || streaming}
+              title="Chat zurücksetzen — Verlauf löschen"
+              className="font-mono micro-caps text-garden-muted-soft hover:text-garden-danger transition-colors flex items-center gap-1 disabled:opacity-40"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="1 4 1 10 7 10"/>
+                <path d="M3.51 15a9 9 0 102.13-9.36L1 10"/>
+              </svg>
+              {resetting ? 'Setze zurück…' : 'Zurücksetzen'}
+            </button>
+          </div>
         )}
 
         {conversation.map((msg) => (
