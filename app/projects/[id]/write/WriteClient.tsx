@@ -165,7 +165,7 @@ export default function WriteClient({ project: initialProject, notes }: Props) {
       </div>
 
       <div className="flex-1 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-6 md:px-12 lg:px-16 py-6 md:py-12 lg:py-16">
+        <div className="max-w-4xl mx-auto px-6 md:px-12 lg:px-16 py-6 md:py-12 lg:py-16">
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
