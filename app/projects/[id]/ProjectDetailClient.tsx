@@ -318,11 +318,12 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
       {/* ── Main panels ── */}
       <div className="flex-1 flex min-h-0 overflow-hidden max-w-7xl w-full mx-auto">
 
-        {/* LEFT: Kernidee + Outline */}
-        <div className={`flex flex-col min-h-0 ${
+        {/* LEFT: Kernidee + Outline. When chat is closed, cap width and center
+            so content reads like a document on wide screens. */}
+        <div className={`flex flex-col min-h-0 w-full ${
           activeTab === 'outline' ? 'flex' : 'hidden md:flex'
         } ${
-          chatOpen ? 'w-full md:w-2/3 md:border-r border-garden-hairline' : 'w-full'
+          chatOpen ? 'md:w-2/3 md:border-r border-garden-hairline' : 'md:max-w-4xl md:mx-auto'
         }`}>
 
           {/* Kernidee — left-aligned, max-w-2xl column */}
@@ -384,34 +385,20 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
             </div>
           </div>
 
-          {/* Outline label + add-section + open-chat toggle */}
+          {/* Outline label + add-section */}
           <div className="flex-shrink-0 px-4 md:px-8 py-2 border-b border-garden-hairline-soft bg-garden-surface/60">
-            <div className="max-w-2xl flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <p className="font-mono micro-caps text-garden-accent">Outline</p>
-                <button
-                  onClick={() => outlineRef.current?.addSection()}
-                  title="Abschnitt einziehen"
-                  className="p-0.5 rounded text-garden-muted-soft hover:text-garden-accent hover:bg-garden-accent-soft transition-colors"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                  </svg>
-                </button>
-              </div>
-              {!chatOpen && (
-                <button
-                  onClick={() => setChatOpen(true)}
-                  className="hidden md:flex font-mono micro-caps text-garden-muted hover:text-garden-accent transition-colors items-center gap-1"
-                  title="KI-Chat öffnen"
-                >
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-                  </svg>
-                  KI-Chat
-                </button>
-              )}
+            <div className="max-w-2xl flex items-center gap-2">
+              <p className="font-mono micro-caps text-garden-accent">Outline</p>
+              <button
+                onClick={() => outlineRef.current?.addSection()}
+                title="Abschnitt einziehen"
+                className="p-0.5 rounded text-garden-muted-soft hover:text-garden-accent hover:bg-garden-accent-soft transition-colors"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/>
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -495,6 +482,23 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
           />
         </div>
       </div>
+
+      {/* Floating KI-Chat tab on right edge — desktop only, when chat is closed */}
+      {!chatOpen && (
+        <button
+          onClick={() => setChatOpen(true)}
+          className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 items-center gap-1.5 bg-garden-surface border border-r-0 border-garden-hairline rounded-l-xl py-3 px-2.5 text-garden-muted hover:text-garden-accent hover:bg-garden-accent-soft transition-colors shadow-paper z-30"
+          title="KI-Chat öffnen"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+          <span className="font-mono micro-caps writing-mode-vertical" style={{ writingMode: 'vertical-rl' }}>
+            KI-Chat
+          </span>
+        </button>
+      )}
 
       <NavBar />
     </div>
