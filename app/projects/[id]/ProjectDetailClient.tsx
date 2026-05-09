@@ -345,44 +345,37 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
             </div>
           </div>
 
-          {/* Brain Dump — collapsible, compact, label flush left */}
-          <div className="flex-shrink-0 px-4 md:px-8 border-b border-garden-hairline bg-garden-surface">
+          {/* Brain Dump — bare textarea (like Kernidee), inline chevron toggle (like Outline +) */}
+          <div className="flex-shrink-0 px-4 md:px-8 pt-3 md:pt-4 pb-2.5 border-b border-garden-hairline bg-garden-surface">
             <div className="max-w-2xl">
               <button
                 onClick={() => setBrainDumpOpen((v) => !v)}
-                className="flex items-center justify-between gap-2 py-2 w-full group"
+                className="flex items-center gap-2 mb-1 group"
                 title={brainDumpOpen ? 'Brain Dump einklappen' : 'Brain Dump aufklappen'}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-mono micro-caps text-garden-accent">Brain Dump</span>
-                  {!brainDumpOpen && !brainDumpDraft.trim() && (
-                    <span className="font-mono text-[10px] text-garden-muted-soft italic">leer</span>
-                  )}
-                  {!brainDumpOpen && brainDumpDraft.trim() && (
-                    <span className="font-mono text-[10px] text-garden-muted-soft tabnums">
-                      · {brainDumpDraft.length} Zeichen
-                    </span>
-                  )}
-                </div>
-                <svg
-                  width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                  strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
-                  className={`flex-shrink-0 text-garden-muted-soft transition-transform ${brainDumpOpen ? '' : '-rotate-90'}`}
-                >
-                  <polyline points="6 9 12 15 18 9"/>
-                </svg>
+                <p className="font-mono micro-caps text-garden-accent">Brain Dump</p>
+                <span className="p-0.5 rounded text-garden-muted-soft group-hover:text-garden-accent group-hover:bg-garden-accent-soft transition-colors">
+                  <svg
+                    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+                    className={`transition-transform ${brainDumpOpen ? '' : '-rotate-90'}`}
+                  >
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </span>
+                {!brainDumpOpen && !brainDumpDraft.trim() && (
+                  <span className="font-mono text-[10px] text-garden-muted-soft italic">leer</span>
+                )}
               </button>
               {brainDumpOpen && (
-                <div className="bg-garden-bg rounded-xl border border-garden-hairline focus-within:border-garden-accent/50 focus-within:ring-2 focus-within:ring-garden-accent/10 transition-all mb-3">
-                  <textarea
-                    value={brainDumpDraft}
-                    onChange={(e) => setBrainDumpDraft(e.target.value)}
-                    placeholder="Geistesblitz hin werfen — wird gespeichert."
-                    rows={2}
-                    className="w-full bg-transparent px-3.5 pt-3 pb-3 text-garden-ink leading-relaxed resize-none outline-none placeholder:text-garden-muted-soft font-serif"
-                    style={{ fontSize: 15, minHeight: '60px' }}
-                  />
-                </div>
+                <textarea
+                  value={brainDumpDraft}
+                  onChange={(e) => setBrainDumpDraft(e.target.value)}
+                  placeholder="Geistesblitz hin werfen — wird gespeichert."
+                  rows={2}
+                  className="w-full bg-transparent text-garden-ink leading-relaxed resize-none outline-none placeholder:text-garden-muted-soft/60 font-serif"
+                  style={{ fontSize: 15, minHeight: '50px' }}
+                />
               )}
             </div>
           </div>
