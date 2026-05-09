@@ -223,11 +223,28 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
               {project.title || (isChapter ? 'Unbenanntes Kapitel' : 'Unbenanntes Projekt')}
             </button>
           )}
+          {/* Counts row */}
+          {(() => {
+            const noteCount = inputs.filter((i) => i.is_note === true && !i.is_section).length
+            const sectionCount = inputs.filter((i) => i.is_section).length
+            const wordCount = (project.writing_content ?? '').trim().split(/\s+/).filter(Boolean).length
+            return (
+              <div className="font-mono micro-caps text-garden-muted-soft mt-1 flex items-center gap-2 flex-wrap tabnums">
+                <span>{noteCount} {noteCount === 1 ? 'Note' : 'Notes'}</span>
+                {sectionCount > 0 && <><span>·</span><span>{sectionCount} {sectionCount === 1 ? 'Abschnitt' : 'Abschnitte'}</span></>}
+                {wordCount > 0 && <><span>·</span><span>{wordCount} {wordCount === 1 ? 'Wort' : 'Wörter'}</span></>}
+              </div>
+            )
+          })()}
         </div>
 
         <Link
           href={`/projects/${project.id}/write`}
-          className="text-xs px-3 py-1.5 rounded-lg bg-garden-accent text-white font-medium hover:bg-garden-accent-dark transition-colors whitespace-nowrap flex items-center gap-1 shadow-paper"
+          className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors whitespace-nowrap flex items-center gap-1 ${
+            project.writing_content?.trim()
+              ? 'bg-garden-accent text-white hover:bg-garden-accent-deep shadow-paper'
+              : 'border border-garden-accent/40 text-garden-accent hover:bg-garden-accent-soft'
+          }`}
           title="Text schreiben"
         >
           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round">
@@ -308,31 +325,31 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
           chatOpen ? 'w-full md:w-2/3 md:border-r border-garden-hairline' : 'w-full'
         }`}>
 
-          {/* Kernidee — centered above outline */}
-          <div className="flex-shrink-0 px-4 md:px-8 pt-4 md:pt-6 pb-3 md:pb-4 border-b border-garden-hairline bg-garden-surface">
-            <div className="max-w-2xl mx-auto">
-              <p className="font-mono micro-caps text-garden-accent mb-1.5 text-center">Kernidee</p>
+          {/* Kernidee — left-aligned, max-w-2xl column */}
+          <div className="flex-shrink-0 px-4 md:px-8 pt-3 md:pt-4 pb-2.5 border-b border-garden-hairline bg-garden-surface">
+            <div className="max-w-2xl">
+              <p className="font-mono micro-caps text-garden-accent mb-1">Kernidee</p>
               <textarea
                 value={kernideeDraft}
                 onChange={(e) => setKernideeDraft(e.target.value)}
                 placeholder="Welcher eine Gedanke trägt diesen Text?"
                 rows={1}
-                className="w-full bg-transparent font-display text-garden-ink outline-none placeholder:text-garden-muted-soft/60 resize-none leading-relaxed text-center"
+                className="w-full bg-transparent font-display text-garden-ink outline-none placeholder:text-garden-muted-soft/60 resize-none leading-relaxed"
                 style={{
-                  fontSize: 17,
-                  fontStyle: kernideeDraft ? 'italic' : 'italic',
+                  fontSize: 15,
+                  fontStyle: 'italic',
                   fontWeight: 400,
                 }}
               />
             </div>
           </div>
 
-          {/* Brain Dump — collapsible, for fleeting thoughts */}
+          {/* Brain Dump — collapsible, compact */}
           <div className="flex-shrink-0 px-4 md:px-8 border-b border-garden-hairline bg-garden-surface">
-            <div className="max-w-2xl mx-auto">
+            <div className="max-w-2xl">
               <button
                 onClick={() => setBrainDumpOpen((v) => !v)}
-                className="w-full flex items-center justify-between gap-2 py-2 group"
+                className="flex items-center justify-between gap-2 py-2 w-full group"
                 title={brainDumpOpen ? 'Brain Dump einklappen' : 'Brain Dump aufklappen'}
               >
                 <div className="flex items-center gap-2">
@@ -344,6 +361,9 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
                     <polyline points="6 9 12 15 18 9"/>
                   </svg>
                   <span className="font-mono micro-caps text-garden-accent">Brain Dump</span>
+                  {!brainDumpOpen && !brainDumpDraft.trim() && (
+                    <span className="font-mono text-[10px] text-garden-muted-soft italic">leer</span>
+                  )}
                 </div>
                 {!brainDumpOpen && brainDumpDraft.trim() && (
                   <span className="font-mono text-[10px] text-garden-muted-soft tabnums">
@@ -355,42 +375,44 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
                 <textarea
                   value={brainDumpDraft}
                   onChange={(e) => setBrainDumpDraft(e.target.value)}
-                  placeholder="Was dir gerade durch den Kopf schießt — ungefiltert. Wird automatisch gespeichert, taucht nirgendwo sonst auf."
-                  rows={4}
-                  className="w-full bg-garden-bg/40 rounded-lg px-3 py-2.5 mb-3 text-[13px] text-garden-ink leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20 border border-garden-hairline placeholder:text-garden-muted-soft font-serif"
-                  style={{ minHeight: '90px' }}
+                  placeholder="Geistesblitz hin werfen — wird gespeichert."
+                  rows={2}
+                  className="w-full bg-garden-bg/40 rounded-lg px-3 py-2 mb-3 text-garden-ink leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20 border border-garden-hairline placeholder:text-garden-muted-soft font-serif"
+                  style={{ fontSize: 15, minHeight: '52px' }}
                 />
               )}
             </div>
           </div>
 
           {/* Outline label + add-section + open-chat toggle */}
-          <div className="flex-shrink-0 px-4 md:px-6 py-2 border-b border-garden-hairline-soft bg-garden-surface/60 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <p className="font-mono micro-caps text-garden-accent">Outline</p>
-              <button
-                onClick={() => outlineRef.current?.addSection()}
-                title="Abschnitt einziehen"
-                className="p-0.5 rounded text-garden-muted-soft hover:text-garden-accent hover:bg-garden-accent-soft transition-colors"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </button>
+          <div className="flex-shrink-0 px-4 md:px-8 py-2 border-b border-garden-hairline-soft bg-garden-surface/60">
+            <div className="max-w-2xl flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <p className="font-mono micro-caps text-garden-accent">Outline</p>
+                <button
+                  onClick={() => outlineRef.current?.addSection()}
+                  title="Abschnitt einziehen"
+                  className="p-0.5 rounded text-garden-muted-soft hover:text-garden-accent hover:bg-garden-accent-soft transition-colors"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                </button>
+              </div>
+              {!chatOpen && (
+                <button
+                  onClick={() => setChatOpen(true)}
+                  className="hidden md:flex font-mono micro-caps text-garden-muted hover:text-garden-accent transition-colors items-center gap-1"
+                  title="KI-Chat öffnen"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+                  </svg>
+                  KI-Chat
+                </button>
+              )}
             </div>
-            {!chatOpen && (
-              <button
-                onClick={() => setChatOpen(true)}
-                className="hidden md:flex font-mono micro-caps text-garden-muted hover:text-garden-accent transition-colors items-center gap-1"
-                title="KI-Chat öffnen"
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-                </svg>
-                KI-Chat
-              </button>
-            )}
           </div>
 
           <ProjectOutline

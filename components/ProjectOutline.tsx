@@ -281,13 +281,15 @@ function SortableNote({
               onChange={(e) => setEditDraft(e.target.value)}
               onBlur={saveEdit}
               onKeyDown={handleEditKeyDown}
-              className="w-full bg-white border border-garden-accent/40 rounded-lg px-2.5 py-1.5 text-sm text-garden-ink leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20"
+              className="w-full bg-white border border-garden-accent/40 rounded-lg px-2.5 py-1.5 text-garden-ink leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20"
+              style={{ fontSize: 15 }}
               rows={Math.max(3, Math.min(12, editDraft.split('\n').length + 1))}
             />
           ) : (
             <p
               onClick={() => onEdit(note.id, 'content')}
-              className="text-sm text-garden-ink leading-relaxed whitespace-pre-wrap break-words cursor-text hover:bg-white/40 -mx-1 px-1 rounded transition-colors"
+              className="text-garden-ink leading-relaxed whitespace-pre-wrap break-words cursor-text hover:bg-white/40 -mx-1 px-1 rounded transition-colors"
+              style={{ fontSize: 15 }}
               title="Klick zum Bearbeiten"
             >
               {note.content}
@@ -742,9 +744,10 @@ const ProjectOutline = forwardRef<ProjectOutlineHandle, Props>(function ProjectO
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="flex-1 overflow-y-auto px-4 py-4 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-4 scrollbar-hide">
+        <div className="max-w-2xl">
         {sorted.length === 0 && (
-          <p className="text-xs text-garden-muted-soft text-center py-8 italic">
+          <p className="text-xs text-garden-muted-soft py-8 italic">
             Noch keine Notes. Füge unten welche hinzu.
           </p>
         )}
@@ -759,7 +762,7 @@ const ProjectOutline = forwardRef<ProjectOutlineHandle, Props>(function ProjectO
             <div className="space-y-2">
               {/* Virtual 'Offen' header — only when there are free notes above any real section */}
               {hasFreeNotes && (
-                <div className="group relative pt-3">
+                <div className="group relative pt-2">
                   <button
                     onClick={() => toggleSectionCollapse(OFFEN_ID)}
                     className="w-full flex items-center gap-1.5 border-b border-garden-hairline pb-1.5"
@@ -771,18 +774,12 @@ const ProjectOutline = forwardRef<ProjectOutlineHandle, Props>(function ProjectO
                     >
                       <polyline points="6 9 12 15 18 9"/>
                     </svg>
-                    <span className="font-mono micro-caps text-garden-muted-soft mr-1">Offen</span>
-                    <span
-                      className="font-display text-garden-muted truncate flex-1 text-left"
-                      style={{ fontSize: 14, fontWeight: 400, fontStyle: 'italic' }}
-                    >
-                      noch nicht zugeordnet
-                    </span>
+                    <span className="font-mono micro-caps text-garden-muted-soft">Offen</span>
                   </button>
                 </div>
               )}
 
-              {renderItems.map(({ item, visible, sectionId, sectionIndex }) => {
+              {renderItems.map(({ item, visible, sectionId, sectionIndex }, idx) => {
                 if (!visible) {
                   // Render a hidden but still-sortable placeholder so dnd-kit
                   // keeps the item in its sortable context (otherwise
@@ -790,23 +787,44 @@ const ProjectOutline = forwardRef<ProjectOutlineHandle, Props>(function ProjectO
                   return <HiddenSortable key={item.id} id={item.id} />
                 }
                 if (item.is_section) {
+                  const nextItem = renderItems[idx + 1]
+                  const isEmptySection = !nextItem || nextItem.item.is_section
+                  const isCollapsed = collapsedSections.has(item.id)
                   return (
-                    <SortableSection
-                      key={item.id}
-                      section={item}
-                      sectionNumber={sectionIndex}
-                      isCollapsed={collapsedSections.has(item.id)}
-                      onToggleCollapse={() => toggleSectionCollapse(item.id)}
-                      onEdit={() => startEditSection(item.id)}
-                      onDelete={() => handleDelete(item.id)}
-                      onAddNote={() => handleAddNoteToSection(item.id)}
-                      isEditing={editingId === item.id}
-                      editDraft={editDraft}
-                      setEditDraft={setEditDraft}
-                      saveEdit={saveEdit}
-                      cancelEdit={cancelEdit}
-                      editRef={editInputRef}
-                    />
+                    <div key={item.id}>
+                      <SortableSection
+                        section={item}
+                        sectionNumber={sectionIndex}
+                        isCollapsed={isCollapsed}
+                        onToggleCollapse={() => toggleSectionCollapse(item.id)}
+                        onEdit={() => startEditSection(item.id)}
+                        onDelete={() => handleDelete(item.id)}
+                        onAddNote={() => handleAddNoteToSection(item.id)}
+                        isEditing={editingId === item.id}
+                        editDraft={editDraft}
+                        setEditDraft={setEditDraft}
+                        saveEdit={saveEdit}
+                        cancelEdit={cancelEdit}
+                        editRef={editInputRef}
+                      />
+                      {/* Empty-section placeholder: invites adding the first note */}
+                      {isEmptySection && !isCollapsed && (
+                        <button
+                          onClick={() => handleAddNoteToSection(item.id)}
+                          className="ml-4 mt-1 font-mono micro-caps text-garden-muted-soft hover:text-garden-accent transition-colors flex items-center gap-1.5"
+                        >
+                          <span>noch leer</span>
+                          <span className="text-garden-hairline">·</span>
+                          <span className="flex items-center gap-0.5">
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="12" y1="5" x2="12" y2="19"/>
+                              <line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            Note
+                          </span>
+                        </button>
+                      )}
+                    </div>
                   )
                 }
                 // Note row — indent if inside any section (real or virtual Offen)
@@ -832,17 +850,16 @@ const ProjectOutline = forwardRef<ProjectOutlineHandle, Props>(function ProjectO
                 )
               })}
               {/* Hidden items must still register for sortable to track them */}
-              {/* They're rendered as zero-height markers above. Keep sortable IDs aligned: */}
-              {/* (We used renderItems to cover all sorted items already.) */}
-              {/* Keep visibleIds reference to satisfy linter when not needed */}
               {visibleIds.length === 0 && null}
             </div>
           </SortableContext>
         </DndContext>
+        </div>
       </div>
 
       {/* Add bar */}
-      <div className="flex-shrink-0 border-t border-garden-hairline bg-garden-surface px-3 py-3">
+      <div className="flex-shrink-0 border-t border-garden-hairline bg-garden-surface px-4 md:px-8 py-3">
+        <div className="max-w-2xl">
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileInput} />
 
         <form onSubmit={handleSubmit}>
@@ -891,6 +908,7 @@ const ProjectOutline = forwardRef<ProjectOutlineHandle, Props>(function ProjectO
             </div>
           </div>
         </form>
+        </div>
       </div>
 
       {mirrorNoteId && (
