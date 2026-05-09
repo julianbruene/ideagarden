@@ -345,7 +345,7 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
             </div>
           </div>
 
-          {/* Brain Dump — collapsible, compact */}
+          {/* Brain Dump — collapsible, compact, label flush left */}
           <div className="flex-shrink-0 px-4 md:px-8 border-b border-garden-hairline bg-garden-surface">
             <div className="max-w-2xl">
               <button
@@ -353,34 +353,36 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
                 className="flex items-center justify-between gap-2 py-2 w-full group"
                 title={brainDumpOpen ? 'Brain Dump einklappen' : 'Brain Dump aufklappen'}
               >
-                <div className="flex items-center gap-2">
-                  <svg
-                    width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
-                    className={`flex-shrink-0 text-garden-muted transition-transform ${brainDumpOpen ? '' : '-rotate-90'}`}
-                  >
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
+                <div className="flex items-center gap-2 min-w-0">
                   <span className="font-mono micro-caps text-garden-accent">Brain Dump</span>
                   {!brainDumpOpen && !brainDumpDraft.trim() && (
                     <span className="font-mono text-[10px] text-garden-muted-soft italic">leer</span>
                   )}
+                  {!brainDumpOpen && brainDumpDraft.trim() && (
+                    <span className="font-mono text-[10px] text-garden-muted-soft tabnums">
+                      · {brainDumpDraft.length} Zeichen
+                    </span>
+                  )}
                 </div>
-                {!brainDumpOpen && brainDumpDraft.trim() && (
-                  <span className="font-mono text-[10px] text-garden-muted-soft tabnums">
-                    {brainDumpDraft.length} Zeichen
-                  </span>
-                )}
+                <svg
+                  width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
+                  className={`flex-shrink-0 text-garden-muted-soft transition-transform ${brainDumpOpen ? '' : '-rotate-90'}`}
+                >
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
               </button>
               {brainDumpOpen && (
-                <textarea
-                  value={brainDumpDraft}
-                  onChange={(e) => setBrainDumpDraft(e.target.value)}
-                  placeholder="Geistesblitz hin werfen — wird gespeichert."
-                  rows={2}
-                  className="w-full bg-garden-bg/40 rounded-lg px-3 py-2 mb-3 text-garden-ink leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20 border border-garden-hairline placeholder:text-garden-muted-soft font-serif"
-                  style={{ fontSize: 15, minHeight: '52px' }}
-                />
+                <div className="bg-garden-bg rounded-xl border border-garden-hairline focus-within:border-garden-accent/50 focus-within:ring-2 focus-within:ring-garden-accent/10 transition-all mb-3">
+                  <textarea
+                    value={brainDumpDraft}
+                    onChange={(e) => setBrainDumpDraft(e.target.value)}
+                    placeholder="Geistesblitz hin werfen — wird gespeichert."
+                    rows={2}
+                    className="w-full bg-transparent px-3.5 pt-3 pb-3 text-garden-ink leading-relaxed resize-none outline-none placeholder:text-garden-muted-soft font-serif"
+                    style={{ fontSize: 15, minHeight: '60px' }}
+                  />
+                </div>
               )}
             </div>
           </div>
