@@ -24,6 +24,10 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
   const [kernideeDraft, setKernideeDraft] = useState(project.kernidee ?? '')
   const kernideeSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const [brainDumpDraft, setBrainDumpDraft] = useState(project.brain_dump ?? '')
+  const [brainDumpOpen, setBrainDumpOpen] = useState(!!project.brain_dump)
+  const brainDumpSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const [completing, setCompleting] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeTab, setActiveTab] = useState<ActiveTab>('outline')
@@ -61,6 +65,22 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
     }, 800)
     return () => { if (kernideeSaveTimer.current) clearTimeout(kernideeSaveTimer.current) }
   }, [kernideeDraft, project.id, project.kernidee])
+
+  // Debounced save for Brain Dump
+  useEffect(() => {
+    if (brainDumpDraft === (project.brain_dump ?? '')) return
+    if (brainDumpSaveTimer.current) clearTimeout(brainDumpSaveTimer.current)
+    brainDumpSaveTimer.current = setTimeout(async () => {
+      const trimmed = brainDumpDraft.trim() || null
+      await fetch(`/api/projects/${project.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ brain_dump: trimmed }),
+      })
+      setProject((p) => ({ ...p, brain_dump: trimmed }))
+    }, 800)
+    return () => { if (brainDumpSaveTimer.current) clearTimeout(brainDumpSaveTimer.current) }
+  }, [brainDumpDraft, project.id, project.brain_dump])
 
   async function saveTitle() {
     setEditingTitle(false)
@@ -304,6 +324,43 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
                   fontWeight: 400,
                 }}
               />
+            </div>
+          </div>
+
+          {/* Brain Dump — collapsible, for fleeting thoughts */}
+          <div className="flex-shrink-0 px-4 md:px-8 border-b border-garden-hairline bg-garden-surface">
+            <div className="max-w-2xl mx-auto">
+              <button
+                onClick={() => setBrainDumpOpen((v) => !v)}
+                className="w-full flex items-center justify-between gap-2 py-2 group"
+                title={brainDumpOpen ? 'Brain Dump einklappen' : 'Brain Dump aufklappen'}
+              >
+                <div className="flex items-center gap-2">
+                  <svg
+                    width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"
+                    className={`flex-shrink-0 text-garden-muted transition-transform ${brainDumpOpen ? '' : '-rotate-90'}`}
+                  >
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                  <span className="font-mono micro-caps text-garden-accent">Brain Dump</span>
+                </div>
+                {!brainDumpOpen && brainDumpDraft.trim() && (
+                  <span className="font-mono text-[10px] text-garden-muted-soft tabnums">
+                    {brainDumpDraft.length} Zeichen
+                  </span>
+                )}
+              </button>
+              {brainDumpOpen && (
+                <textarea
+                  value={brainDumpDraft}
+                  onChange={(e) => setBrainDumpDraft(e.target.value)}
+                  placeholder="Was dir gerade durch den Kopf schießt — ungefiltert. Wird automatisch gespeichert, taucht nirgendwo sonst auf."
+                  rows={4}
+                  className="w-full bg-garden-bg/40 rounded-lg px-3 py-2.5 mb-3 text-[13px] text-garden-ink leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20 border border-garden-hairline placeholder:text-garden-muted-soft font-serif"
+                  style={{ minHeight: '90px' }}
+                />
+              )}
             </div>
           </div>
 

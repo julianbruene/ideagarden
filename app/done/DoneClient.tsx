@@ -1,5 +1,6 @@
 'use client'
 
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 
 export interface DoneItem {
@@ -45,7 +46,6 @@ function highlight(text: string, query: string): React.ReactNode {
 }
 
 export default function DoneClient({ items }: Props) {
-  const [downloading, setDownloading] = useState<string | null>(null)
   const [query, setQuery] = useState('')
 
   const filtered = useMemo(() => {
@@ -53,28 +53,6 @@ export default function DoneClient({ items }: Props) {
     if (!q) return items
     return items.filter((item) => item.searchBlob.includes(q))
   }, [items, query])
-
-  async function downloadMarkdown(item: DoneItem) {
-    if (downloading) return
-    setDownloading(item.id)
-    try {
-      const endpoint = item.kind === 'project'
-        ? `/api/projects/${item.id}/export`
-        : `/api/export/${item.id}`
-      const res = await fetch(endpoint)
-      const { markdown } = await res.json()
-      const blob = new Blob([markdown], { type: 'text/markdown' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      const prefix = item.kind === 'project' ? 'projekt' : 'idee'
-      a.download = `${(item.title ?? prefix).replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
-      a.click()
-      URL.revokeObjectURL(url)
-    } finally {
-      setDownloading(null)
-    }
-  }
 
   if (items.length === 0) {
     return (
@@ -132,63 +110,56 @@ export default function DoneClient({ items }: Props) {
         </p>
       )}
 
-      {/* List — hairline rows */}
+      {/* List — clickable hairline rows */}
       <div>
-        {filtered.map((item, i) => (
-          <div
-            key={`${item.kind}-${item.id}`}
-            className="group relative py-5 animate-fade-in"
-            style={{
-              borderTop: i === 0 ? 'none' : '1px solid #E8E3D8',
-            }}
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="font-mono micro-caps text-garden-accent">
-                    {item.kind === 'project' ? 'Projekt' : 'Idee'}
-                  </span>
-                  <span className="font-mono micro-caps text-garden-muted-soft">
-                    · abgeschlossen {formatDate(item.completed_at)}
-                  </span>
-                </div>
-                <h3
-                  className="font-display display-tight balance text-garden-ink"
-                  style={{ fontSize: 19, lineHeight: 1.25, fontWeight: 400 }}
-                >
-                  {highlight(
-                    item.title || (item.kind === 'project' ? 'Unbenanntes Projekt' : 'Unbenannte Idee'),
-                    query,
+        {filtered.map((item, i) => {
+          const href = item.kind === 'project' ? `/projects/${item.id}` : `/garden/${item.id}`
+          return (
+            <Link
+              key={`${item.kind}-${item.id}`}
+              href={href}
+              className="group relative block py-5 animate-fade-in transition-colors hover:bg-garden-hairline-soft/40 -mx-3 px-3 rounded"
+              style={{
+                borderTop: i === 0 ? 'none' : '1px solid #E8E3D8',
+              }}
+            >
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="font-mono micro-caps text-garden-accent">
+                      {item.kind === 'project' ? 'Projekt' : 'Idee'}
+                    </span>
+                    <span className="font-mono micro-caps text-garden-muted-soft">
+                      · abgeschlossen {formatDate(item.completed_at)}
+                    </span>
+                  </div>
+                  <h3
+                    className="font-display display-tight balance text-garden-ink"
+                    style={{ fontSize: 19, lineHeight: 1.25, fontWeight: 400 }}
+                  >
+                    {highlight(
+                      item.title || (item.kind === 'project' ? 'Unbenanntes Projekt' : 'Unbenannte Idee'),
+                      query,
+                    )}
+                  </h3>
+                  {item.synthesis && (
+                    <p className="font-display italic text-[13px] text-garden-muted mt-2 leading-relaxed line-clamp-2">
+                      {highlight(item.synthesis, query)}
+                    </p>
                   )}
-                </h3>
-                {item.synthesis && (
-                  <p className="font-display italic text-[13px] text-garden-muted mt-2 leading-relaxed line-clamp-2">
-                    {highlight(item.synthesis, query)}
-                  </p>
-                )}
-              </div>
-
-              <button
-                onClick={() => downloadMarkdown(item)}
-                disabled={downloading === item.id}
-                className="flex-shrink-0 font-mono micro-caps text-garden-muted hover:text-garden-accent transition-colors flex items-center gap-1.5 disabled:opacity-40 mt-1"
-                title="Als Markdown herunterladen"
-              >
-                {downloading === item.id ? (
-                  <span className="w-3 h-3 border-2 border-garden-muted border-t-transparent rounded-full animate-spin block" />
-                ) : (
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
+                </div>
+                <span className="flex-shrink-0 mt-1 font-mono micro-caps text-garden-muted-soft group-hover:text-garden-accent transition-colors flex items-center gap-1">
+                  Öffnen
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
                   </svg>
-                )}
-                <span>md</span>
-              </button>
-            </div>
-          </div>
-        ))}
+                </span>
+              </div>
+            </Link>
+          )
+        })}
       </div>
     </div>
   )

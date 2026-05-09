@@ -11,13 +11,11 @@ export async function POST(req: Request, { params }: Params) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { content, is_section = false } = await req.json() as {
-    content: string
+    content?: string
     is_section?: boolean
   }
-  // Sections may have empty title at creation time — only require content for notes
-  if (!is_section && !content?.trim()) {
-    return NextResponse.json({ error: 'content required' }, { status: 400 })
-  }
+  // Both sections and notes may be created empty for inline-edit flows.
+  // The client opens the new row in edit mode and the user types right away.
 
   const { data, error } = await supabase
     .from('inputs')

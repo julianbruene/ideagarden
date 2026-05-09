@@ -54,6 +54,7 @@ export interface Project {
   writing_content: string | null
   synthesis: string | null
   kernidee: string | null
+  brain_dump: string | null
   kind: ProjectKind
   parent_project_id: string | null
   chapter_order: number | null

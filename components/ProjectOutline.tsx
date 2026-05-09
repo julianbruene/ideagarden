@@ -53,7 +53,7 @@ function sortByOutline(a: Input, b: Input) {
 /* ------------------------------------------------------------------ */
 function SortableSection({
   section, sectionNumber, isCollapsed, onToggleCollapse,
-  onEdit, onDelete, isEditing, editDraft, setEditDraft, saveEdit, cancelEdit, editRef,
+  onEdit, onDelete, onAddNote, isEditing, editDraft, setEditDraft, saveEdit, cancelEdit, editRef,
 }: {
   section: Input
   sectionNumber: number
@@ -61,6 +61,7 @@ function SortableSection({
   onToggleCollapse: () => void
   onEdit: () => void
   onDelete: () => void
+  onAddNote: () => void
   isEditing: boolean
   editDraft: string
   setEditDraft: (s: string) => void
@@ -142,6 +143,18 @@ function SortableSection({
             {section.content || <span className="text-garden-muted-soft italic">Unbenannter Abschnitt</span>}
           </button>
         )}
+
+        {/* Add note to this section */}
+        <button
+          onClick={onAddNote}
+          title="Note in diesem Abschnitt hinzufügen"
+          className="flex-shrink-0 p-1 text-garden-muted-soft hover:text-garden-accent transition-colors"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"/>
+            <line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+        </button>
 
         {/* Delete */}
         <button
@@ -519,6 +532,66 @@ const ProjectOutline = forwardRef<ProjectOutlineHandle, Props>(function ProjectO
     }
   }
 
+  // Add an empty note INTO a specific section (at the end of that section)
+  // and immediately open it for inline edit.
+  async function handleAddNoteToSection(sectionId: string) {
+    // 1. Find where this section is in the sorted list
+    const sectionIdx = sorted.findIndex((n) => n.id === sectionId)
+    if (sectionIdx < 0) return
+
+    // 2. Find end of the section: position just before the next section (or end of list)
+    let insertAt = sorted.length
+    for (let i = sectionIdx + 1; i < sorted.length; i++) {
+      if (sorted[i].is_section) { insertAt = i; break }
+    }
+
+    // 3. Create the empty note via API (without outline_order yet)
+    const res = await fetch(`/api/projects/${projectId}/notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '', is_section: false }),
+    })
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      alert(`Note anlegen fehlgeschlagen: ${data?.error ?? res.status}`)
+      return
+    }
+    const { input } = await res.json()
+    if (!input) return
+
+    // 4. Build new ordering: insert the note at insertAt, reassign 0..N
+    const newSorted = [
+      ...sorted.slice(0, insertAt),
+      input as Input,
+      ...sorted.slice(insertAt),
+    ]
+    const reordered: Input[] = newSorted.map((n, i) => ({ ...n, outline_order: i }))
+
+    // 5. Apply locally — first the new note, then full reorder snapshot
+    onNoteAdded({ ...input, outline_order: insertAt })
+    onNotesReordered(reordered)
+
+    // 6. Persist outline_order via the reorder endpoint
+    await fetch(`/api/projects/${projectId}/reorder-notes`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ordered_ids: reordered.map((n) => n.id) }),
+    })
+
+    // 7. Make sure the section is expanded so the user sees the new row
+    setCollapsedSections((prev) => {
+      if (!prev.has(sectionId)) return prev
+      const next = new Set(prev)
+      next.delete(sectionId)
+      return next
+    })
+
+    // 8. Enter inline edit immediately
+    setEditingId(input.id)
+    setEditingField('content')
+    setEditDraft('')
+  }
+
   // Expose addSection so the parent can trigger it from a header button
   const addSectionRef = useRef<() => void>(() => {})
   addSectionRef.current = handleAddSection
@@ -618,6 +691,21 @@ const ProjectOutline = forwardRef<ProjectOutlineHandle, Props>(function ProjectO
     const item = notes.find((n) => n.id === editingId)
     if (!item) return
     const current = editingField === 'content' ? item.content : (item.image_transcript ?? '')
+
+    // If a brand-new note (originally empty) is blurred without typing → delete it
+    // so we don't leave orphan empty rows behind.
+    const isStillEmpty = !item.is_section
+      && editingField === 'content'
+      && !current.trim()
+      && !editDraft.trim()
+    if (isStillEmpty) {
+      setEditingId(null)
+      setEditDraft('')
+      onNoteRemoved(item.id)
+      await fetch(`/api/inputs/${item.id}`, { method: 'DELETE' })
+      return
+    }
+
     if (editDraft === current) { cancelEdit(); return }
 
     const optimistic: Input = editingField === 'content'
@@ -711,6 +799,7 @@ const ProjectOutline = forwardRef<ProjectOutlineHandle, Props>(function ProjectO
                       onToggleCollapse={() => toggleSectionCollapse(item.id)}
                       onEdit={() => startEditSection(item.id)}
                       onDelete={() => handleDelete(item.id)}
+                      onAddNote={() => handleAddNoteToSection(item.id)}
                       isEditing={editingId === item.id}
                       editDraft={editDraft}
                       setEditDraft={setEditDraft}
