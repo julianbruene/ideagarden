@@ -69,3 +69,12 @@ export interface Project {
 export interface IdeaWithInputs extends Idea {
   inputs: Input[]
 }
+
+// Handwerk — a permanent snippet (no promote, no AI)
+export interface CraftSnippet {
+  id: string
+  user_id: string
+  content: string
+  mood: string | null
+  created_at: string
+}

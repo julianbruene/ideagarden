@@ -7,6 +7,7 @@ const navItems = [
   { href: '/dump',     label: 'Dump' },
   { href: '/garden',   label: 'Garden' },
   { href: '/projects', label: 'Projects' },
+  { href: '/handwerk', label: 'Handwerk' },
   { href: '/done',     label: 'Kompost' },
 ]
 
