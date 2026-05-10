@@ -41,18 +41,27 @@ export default function HandwerkClient({ initialSnippets }: Props) {
   const [snippets, setSnippets] = useState<CraftSnippet[]>(initialSnippets)
   const [text, setText] = useState('')
   const [mood, setMood] = useState('')
+  const [kniff, setKniff] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editText, setEditText] = useState('')
   const [editMood, setEditMood] = useState('')
+  const [editKniff, setEditKniff] = useState('')
   const [query, setQuery] = useState('')
   const [activeMood, setActiveMood] = useState<string | null>(null)
+  const [activeKniff, setActiveKniff] = useState<string | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Collect existing moods for filter chips
+  // Collect existing tag values for filter chips
   const moods = useMemo(() => {
     const set = new Set<string>()
     for (const s of snippets) if (s.mood) set.add(s.mood)
+    return Array.from(set).sort((a, b) => a.localeCompare(b, 'de'))
+  }, [snippets])
+
+  const kniffe = useMemo(() => {
+    const set = new Set<string>()
+    for (const s of snippets) if (s.kniff) set.add(s.kniff)
     return Array.from(set).sort((a, b) => a.localeCompare(b, 'de'))
   }, [snippets])
 
@@ -60,10 +69,15 @@ export default function HandwerkClient({ initialSnippets }: Props) {
     const q = query.trim().toLowerCase()
     return snippets.filter((s) => {
       if (activeMood && s.mood !== activeMood) return false
+      if (activeKniff && s.kniff !== activeKniff) return false
       if (!q) return true
-      return s.content.toLowerCase().includes(q) || (s.mood ?? '').toLowerCase().includes(q)
+      return (
+        s.content.toLowerCase().includes(q) ||
+        (s.mood ?? '').toLowerCase().includes(q) ||
+        (s.kniff ?? '').toLowerCase().includes(q)
+      )
     })
-  }, [snippets, query, activeMood])
+  }, [snippets, query, activeMood, activeKniff])
 
   async function handleSubmit(e?: React.FormEvent) {
     e?.preventDefault()
@@ -74,13 +88,18 @@ export default function HandwerkClient({ initialSnippets }: Props) {
       const res = await fetch('/api/craft', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: trimmed, mood: mood.trim() || null }),
+        body: JSON.stringify({
+          content: trimmed,
+          mood: mood.trim() || null,
+          kniff: kniff.trim() || null,
+        }),
       })
       if (!res.ok) return
       const { snippet } = await res.json()
       setSnippets((prev) => [snippet, ...prev])
       setText('')
       setMood('')
+      setKniff('')
       textareaRef.current?.focus()
     } finally {
       setSubmitting(false)
@@ -103,6 +122,7 @@ export default function HandwerkClient({ initialSnippets }: Props) {
     setEditingId(s.id)
     setEditText(s.content)
     setEditMood(s.mood ?? '')
+    setEditKniff(s.kniff ?? '')
   }
 
   async function saveEdit() {
@@ -115,7 +135,11 @@ export default function HandwerkClient({ initialSnippets }: Props) {
     const res = await fetch(`/api/craft/${editingId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content: trimmed, mood: editMood.trim() || null }),
+      body: JSON.stringify({
+        content: trimmed,
+        mood: editMood.trim() || null,
+        kniff: editKniff.trim() || null,
+      }),
     })
     if (res.ok) {
       const { snippet } = await res.json()
@@ -128,7 +152,10 @@ export default function HandwerkClient({ initialSnippets }: Props) {
     setEditingId(null)
     setEditText('')
     setEditMood('')
+    setEditKniff('')
   }
+
+  const filterActive = !!(activeMood || activeKniff || query)
 
   return (
     <div className="min-h-screen bg-garden-bg pb-24 md:pb-0 md:pl-60">
@@ -173,16 +200,34 @@ export default function HandwerkClient({ initialSnippets }: Props) {
             style={{ fontSize: 18, lineHeight: 1.5, fontWeight: 400 }}
           />
 
-          <div className="flex items-center justify-between mt-3 gap-3">
-            <input
-              type="text"
-              value={mood}
-              onChange={(e) => setMood(e.target.value)}
-              placeholder="Stimmung — optional (z. B. ruhig, scharf)"
-              className="flex-1 min-w-0 bg-transparent outline-none font-mono text-[12px] text-garden-muted placeholder:text-garden-muted-soft"
-              maxLength={32}
-              disabled={submitting}
-            />
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="font-mono micro-caps text-garden-muted-soft flex-shrink-0">Stimmung</span>
+              <input
+                type="text"
+                value={mood}
+                onChange={(e) => setMood(e.target.value)}
+                placeholder="ruhig, scharf…"
+                className="flex-1 min-w-0 bg-transparent outline-none font-mono text-[12px] text-garden-muted placeholder:text-garden-muted-soft/70"
+                maxLength={32}
+                disabled={submitting}
+              />
+            </div>
+            <span className="text-garden-muted-soft font-mono text-[10px]">·</span>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              <span className="font-mono micro-caps text-garden-muted-soft flex-shrink-0">Kniff</span>
+              <input
+                type="text"
+                value={kniff}
+                onChange={(e) => setKniff(e.target.value)}
+                placeholder="Anfang, Dialog…"
+                className="flex-1 min-w-0 bg-transparent outline-none font-mono text-[12px] text-garden-muted placeholder:text-garden-muted-soft/70"
+                maxLength={32}
+                disabled={submitting}
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-3 mt-3">
             <span className="font-mono text-[10px] text-garden-muted-soft hidden sm:inline">
               ⌘↵ speichern
             </span>
@@ -201,10 +246,10 @@ export default function HandwerkClient({ initialSnippets }: Props) {
           </div>
         </form>
 
-        {/* Search + mood filter */}
+        {/* Search + filter chips */}
         {snippets.length > 0 && (
-          <div className="mt-5 flex flex-wrap items-center gap-2">
-            <div className="relative flex-1 min-w-[160px]">
+          <div className="mt-5 space-y-2">
+            <div className="relative">
               <svg
                 width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"
@@ -221,28 +266,57 @@ export default function HandwerkClient({ initialSnippets }: Props) {
                 className="w-full bg-transparent pl-6 pr-2 py-1 text-[14px] text-garden-ink placeholder:text-garden-muted-soft outline-none"
               />
             </div>
-            {moods.map((m) => {
-              const isActive = activeMood === m
-              return (
-                <button
-                  key={m}
-                  onClick={() => setActiveMood(isActive ? null : m)}
-                  className={`font-mono micro-caps px-2 py-0.5 rounded-full border transition-colors ${
-                    isActive
-                      ? 'bg-garden-accent-soft text-garden-accent-deep border-garden-accent/30'
-                      : 'border-garden-hairline text-garden-muted hover:text-garden-ink hover:border-garden-muted-soft'
-                  }`}
-                >
-                  {m}
-                </button>
-              )
-            })}
-            {(activeMood || query) && (
+
+            {moods.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono micro-caps text-garden-muted-soft w-16 flex-shrink-0">Stimmung</span>
+                {moods.map((m) => {
+                  const isActive = activeMood === m
+                  return (
+                    <button
+                      key={`mood-${m}`}
+                      onClick={() => setActiveMood(isActive ? null : m)}
+                      className={`font-mono micro-caps px-2 py-0.5 rounded-full border transition-colors ${
+                        isActive
+                          ? 'bg-garden-accent-soft text-garden-accent-deep border-garden-accent/30'
+                          : 'border-garden-hairline text-garden-muted hover:text-garden-ink hover:border-garden-muted-soft'
+                      }`}
+                    >
+                      {m}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {kniffe.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-mono micro-caps text-garden-muted-soft w-16 flex-shrink-0">Kniff</span>
+                {kniffe.map((k) => {
+                  const isActive = activeKniff === k
+                  return (
+                    <button
+                      key={`kniff-${k}`}
+                      onClick={() => setActiveKniff(isActive ? null : k)}
+                      className={`font-mono micro-caps px-2 py-0.5 rounded-full border transition-colors ${
+                        isActive
+                          ? 'bg-garden-accent-soft text-garden-accent-deep border-garden-accent/30'
+                          : 'border-garden-hairline text-garden-muted hover:text-garden-ink hover:border-garden-muted-soft'
+                      }`}
+                    >
+                      {k}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
+            {filterActive && (
               <button
-                onClick={() => { setActiveMood(null); setQuery('') }}
+                onClick={() => { setActiveMood(null); setActiveKniff(null); setQuery('') }}
                 className="font-mono micro-caps text-garden-muted-soft hover:text-garden-ink transition-colors"
               >
-                zurücksetzen
+                Filter zurücksetzen
               </button>
             )}
           </div>
@@ -260,7 +334,7 @@ export default function HandwerkClient({ initialSnippets }: Props) {
         )}
 
         {/* Result count */}
-        {snippets.length > 0 && (query || activeMood) && (
+        {snippets.length > 0 && filterActive && (
           <p className="font-mono micro-caps text-garden-muted-soft mt-4">
             {filtered.length === 0
               ? 'Keine Treffer'
@@ -290,15 +364,29 @@ export default function HandwerkClient({ initialSnippets }: Props) {
                       className="w-full bg-transparent resize-none outline-none text-garden-ink font-display pretty"
                       style={{ fontSize: 17, lineHeight: 1.55, fontWeight: 400 }}
                     />
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="text"
-                        value={editMood}
-                        onChange={(e) => setEditMood(e.target.value)}
-                        placeholder="Stimmung"
-                        className="flex-1 bg-transparent outline-none font-mono text-[12px] text-garden-muted placeholder:text-garden-muted-soft"
-                        maxLength={32}
-                      />
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="font-mono micro-caps text-garden-muted-soft flex-shrink-0">Stimmung</span>
+                        <input
+                          type="text"
+                          value={editMood}
+                          onChange={(e) => setEditMood(e.target.value)}
+                          className="flex-1 min-w-0 bg-transparent outline-none font-mono text-[12px] text-garden-muted"
+                          maxLength={32}
+                        />
+                      </div>
+                      <div className="flex items-center gap-2 flex-1 min-w-0">
+                        <span className="font-mono micro-caps text-garden-muted-soft flex-shrink-0">Kniff</span>
+                        <input
+                          type="text"
+                          value={editKniff}
+                          onChange={(e) => setEditKniff(e.target.value)}
+                          className="flex-1 min-w-0 bg-transparent outline-none font-mono text-[12px] text-garden-muted"
+                          maxLength={32}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end gap-3">
                       <button
                         onClick={cancelEdit}
                         className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
@@ -321,13 +409,23 @@ export default function HandwerkClient({ initialSnippets }: Props) {
                     >
                       {highlight(s.content, query)}
                     </p>
-                    <div className="flex items-center gap-3 mt-2">
+                    <div className="flex items-center gap-3 mt-2 flex-wrap">
                       {s.mood && (
                         <button
                           onClick={() => setActiveMood(activeMood === s.mood ? null : s.mood)}
                           className="font-mono micro-caps text-garden-accent hover:text-garden-accent-deep transition-colors"
+                          title="Nach Stimmung filtern"
                         >
                           {s.mood}
+                        </button>
+                      )}
+                      {s.kniff && (
+                        <button
+                          onClick={() => setActiveKniff(activeKniff === s.kniff ? null : s.kniff)}
+                          className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
+                          title="Nach Kniff filtern"
+                        >
+                          · {s.kniff}
                         </button>
                       )}
                       <span className="font-mono micro-caps text-garden-muted-soft">

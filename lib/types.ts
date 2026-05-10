@@ -76,5 +76,6 @@ export interface CraftSnippet {
   user_id: string
   content: string
   mood: string | null
+  kniff: string | null
   created_at: string
 }

@@ -20,13 +20,20 @@ export async function POST(req: Request) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { content, mood = null } = await req.json() as { content?: string; mood?: string | null }
+  const { content, mood = null, kniff = null } = await req.json() as {
+    content?: string; mood?: string | null; kniff?: string | null
+  }
   const trimmed = (content ?? '').trim()
   if (!trimmed) return NextResponse.json({ error: 'content required' }, { status: 400 })
 
   const { data, error } = await supabase
     .from('craft_snippets')
-    .insert({ user_id: user.id, content: trimmed, mood: mood?.trim() || null })
+    .insert({
+      user_id: user.id,
+      content: trimmed,
+      mood: mood?.trim() || null,
+      kniff: kniff?.trim() || null,
+    })
     .select()
     .single()
 
