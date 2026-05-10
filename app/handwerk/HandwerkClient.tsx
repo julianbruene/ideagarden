@@ -215,7 +215,7 @@ export default function HandwerkClient({ initialSnippets }: Props) {
             </div>
             <span className="text-garden-muted-soft font-mono text-[10px]">·</span>
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              <span className="font-mono micro-caps text-garden-muted-soft flex-shrink-0">Kniff</span>
+              <span className="font-mono micro-caps text-garden-muted-soft flex-shrink-0">Technik</span>
               <input
                 type="text"
                 value={kniff}
@@ -291,7 +291,7 @@ export default function HandwerkClient({ initialSnippets }: Props) {
 
             {kniffe.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-mono micro-caps text-garden-muted-soft w-16 flex-shrink-0">Kniff</span>
+                <span className="font-mono micro-caps text-garden-muted-soft w-16 flex-shrink-0">Technik</span>
                 {kniffe.map((k) => {
                   const isActive = activeKniff === k
                   return (
@@ -376,7 +376,7 @@ export default function HandwerkClient({ initialSnippets }: Props) {
                         />
                       </div>
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <span className="font-mono micro-caps text-garden-muted-soft flex-shrink-0">Kniff</span>
+                        <span className="font-mono micro-caps text-garden-muted-soft flex-shrink-0">Technik</span>
                         <input
                           type="text"
                           value={editKniff}
@@ -423,7 +423,7 @@ export default function HandwerkClient({ initialSnippets }: Props) {
                         <button
                           onClick={() => setActiveKniff(activeKniff === s.kniff ? null : s.kniff)}
                           className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
-                          title="Nach Kniff filtern"
+                          title="Nach Technik filtern"
                         >
                           · {s.kniff}
                         </button>
