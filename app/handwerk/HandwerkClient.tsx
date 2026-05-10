@@ -164,6 +164,7 @@ export default function HandwerkClient({ initialSnippets }: Props) {
         <div className="max-w-2xl md:max-w-3xl mx-auto md:mx-0">
           <div className="flex items-center gap-3 mb-3">
             <span className="font-mono micro-caps text-garden-muted-soft">05 · Handwerk</span>
+            {/* Note: number stays 05 — Handwerk sits in slot 5, Kompost in slot 4. */}
             <span className="h-px flex-1 bg-garden-hairline" />
             <span className="font-mono micro-caps text-garden-muted-soft">
               {snippets.length === 1 ? '1 Schnipsel' : `${snippets.length} Schnipsel`}

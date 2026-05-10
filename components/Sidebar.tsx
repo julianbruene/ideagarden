@@ -8,8 +8,8 @@ const navItems = [
   { href: '/dump',     label: 'Dump',     hint: '⌘1' },
   { href: '/garden',   label: 'Garden',   hint: '⌘2' },
   { href: '/projects', label: 'Projects', hint: '⌘3' },
-  { href: '/handwerk', label: 'Handwerk', hint: '⌘4' },
-  { href: '/done',     label: 'Kompost',  hint: '⌘5' },
+  { href: '/done',     label: 'Kompost',  hint: '⌘4' },
+  { href: '/handwerk', label: 'Handwerk', hint: '⌘5' },
 ]
 
 export default function Sidebar() {
