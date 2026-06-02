@@ -55,6 +55,12 @@ export interface Project {
   synthesis: string | null
   kernidee: string | null
   brain_dump: string | null
+  // Book-level: who is this for? (one sentence)
+  zielleser?: string | null
+  // Book-level: recurring concepts/metaphors/arguments running through the book
+  roter_faden?: string | null
+  // Chapter-level: what role this chapter plays in the book (not its content)
+  chapter_function?: string | null
   kind: ProjectKind
   parent_project_id: string | null
   chapter_order: number | null

@@ -13,12 +13,13 @@ export async function PATCH(req: Request, { params }: Params) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { starred, content, image_transcript, used, outline_order } = body as {
+  const { starred, content, image_transcript, used, outline_order, project_id } = body as {
     starred?: boolean
     content?: string
     image_transcript?: string | null
     used?: boolean
     outline_order?: number | null
+    project_id?: string | null
   }
 
   // Fetch the target input (for mirror group detection + auth)
@@ -55,6 +56,9 @@ export async function PATCH(req: Request, { params }: Params) {
   if (typeof starred === 'boolean') localUpdates.starred = starred
   if (typeof used === 'boolean') localUpdates.used = used
   if (outline_order !== undefined) localUpdates.outline_order = outline_order
+  // Reassigning a note to a different project (Book Dump → Chapter).
+  // Only enforced as belonging to this user via the WHERE clause below.
+  if (project_id !== undefined) localUpdates.project_id = project_id
 
   if (Object.keys(localUpdates).length > 0) {
     const { error: localErr } = await supabase

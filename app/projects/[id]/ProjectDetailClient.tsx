@@ -11,11 +11,14 @@ import type { Project, Input, ChatRole } from '@/lib/types'
 interface Props {
   project: Project
   initialInputs: Input[]
+  // When this project is a chapter (has parent_project_id), the title of the
+  // parent book — surfaced as a clickable breadcrumb above the chapter title.
+  parentBookTitle?: string | null
 }
 
 type ActiveTab = 'outline' | 'chat'
 
-export default function ProjectDetailClient({ project: initialProject, initialInputs }: Props) {
+export default function ProjectDetailClient({ project: initialProject, initialInputs, parentBookTitle = null }: Props) {
   const [project, setProject] = useState<Project>(initialProject)
   const [inputs, setInputs] = useState<Input[]>(initialInputs)
   const [editingTitle, setEditingTitle] = useState(false)
@@ -195,10 +198,23 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
         </Link>
 
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5 mb-0.5">
-            <span className="text-[9px] uppercase tracking-widest text-garden-seed font-semibold">
+          <div className="flex items-center gap-1.5 mb-0.5 min-w-0">
+            <span className="text-[9px] uppercase tracking-widest text-garden-seed font-semibold flex-shrink-0">
               {isChapter ? 'Kapitel' : 'Projekt'}
             </span>
+            {/* Breadcrumb to parent book (chapters only) */}
+            {isChapter && project.parent_project_id && parentBookTitle && (
+              <>
+                <span className="text-[9px] text-garden-muted-soft flex-shrink-0">·</span>
+                <Link
+                  href={`/projects/${project.parent_project_id}`}
+                  className="text-[10px] text-garden-muted hover:text-garden-accent transition-colors truncate"
+                  title={`Zum Buch: ${parentBookTitle}`}
+                >
+                  {parentBookTitle}
+                </Link>
+              </>
+            )}
           </div>
           {editingTitle ? (
             <input

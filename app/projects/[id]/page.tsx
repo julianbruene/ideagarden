@@ -21,15 +21,29 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   if (!project) notFound()
 
-  // Books: load chapters, no inputs
+  // Books: load chapters + book-level notes (Book Dump)
   if (project.kind === 'book') {
-    const { data: chapters } = await supabase
-      .from('projects')
-      .select('*')
-      .eq('parent_project_id', id)
-      .order('chapter_order', { ascending: true })
+    const [{ data: chapters }, { data: bookNotes }] = await Promise.all([
+      supabase
+        .from('projects')
+        .select('*')
+        .eq('parent_project_id', id)
+        .order('chapter_order', { ascending: true }),
+      supabase
+        .from('inputs')
+        .select('*')
+        .eq('project_id', id)
+        .eq('is_note', true)
+        .order('created_at', { ascending: false }),
+    ])
 
-    return <BookDetailClient book={project} initialChapters={chapters ?? []} />
+    return (
+      <BookDetailClient
+        book={project}
+        initialChapters={chapters ?? []}
+        initialBookNotes={bookNotes ?? []}
+      />
+    )
   }
 
   // Single (or chapter): load inputs as before
@@ -39,5 +53,22 @@ export default async function ProjectDetailPage({ params }: Props) {
     .eq('project_id', id)
     .order('created_at', { ascending: true })
 
-  return <ProjectDetailClient project={project} initialInputs={inputs ?? []} />
+  // If this is a chapter, fetch the parent book's title for breadcrumb
+  let parentBookTitle: string | null = null
+  if (project.parent_project_id) {
+    const { data: parent } = await supabase
+      .from('projects')
+      .select('title')
+      .eq('id', project.parent_project_id)
+      .single()
+    parentBookTitle = parent?.title ?? null
+  }
+
+  return (
+    <ProjectDetailClient
+      project={project}
+      initialInputs={inputs ?? []}
+      parentBookTitle={parentBookTitle}
+    />
+  )
 }
