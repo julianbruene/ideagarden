@@ -98,6 +98,8 @@ export interface ConceptLink {
   from_id: string
   to_id: string
   user_id: string
+  // Short text on WHY the two concepts belong together.
+  note: string | null
   created_at: string
 }
 

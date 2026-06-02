@@ -23,15 +23,15 @@ export default async function ConceptPage({ params }: Props) {
 
   if (!concept) notFound()
 
-  // Linked concepts (undirected)
+  // Linked concepts (undirected) — collect per-link notes as a map
   const [{ data: outgoing }, { data: incoming }] = await Promise.all([
-    supabase.from('concept_links').select('to_id').eq('from_id', id).eq('user_id', user.id),
-    supabase.from('concept_links').select('from_id').eq('to_id', id).eq('user_id', user.id),
+    supabase.from('concept_links').select('to_id, note').eq('from_id', id).eq('user_id', user.id),
+    supabase.from('concept_links').select('from_id, note').eq('to_id', id).eq('user_id', user.id),
   ])
-  const linkedIds = Array.from(new Set<string>([
-    ...(outgoing ?? []).map((r) => r.to_id),
-    ...(incoming ?? []).map((r) => r.from_id),
-  ]))
+  const noteByOther = new Map<string, string | null>()
+  for (const row of outgoing ?? []) noteByOther.set(row.to_id, row.note ?? null)
+  for (const row of incoming ?? []) noteByOther.set(row.from_id, row.note ?? null)
+  const linkedIds = Array.from(noteByOther.keys())
 
   let linked: LinkedConcept[] = []
   if (linkedIds.length > 0) {
@@ -39,7 +39,10 @@ export default async function ConceptPage({ params }: Props) {
       .from('concepts')
       .select('id, title, summary')
       .in('id', linkedIds)
-    linked = (data ?? []) as LinkedConcept[]
+    linked = (data ?? []).map((c) => ({
+      ...c,
+      note: noteByOther.get(c.id) ?? null,
+    })) as LinkedConcept[]
   }
 
   // All other concepts (for the link picker) — minimal fields

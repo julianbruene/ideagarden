@@ -11,6 +11,9 @@ export interface LinkedConcept {
   id: string
   title: string | null
   summary: string | null
+  // Why this link exists — written when the connection is made,
+  // editable from either side of the pair.
+  note?: string | null
 }
 
 interface Props {
@@ -53,6 +56,13 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
   const [source, setSource] = useState(concept.source ?? '')
   const [picking, setPicking] = useState(false)
   const [pickerQuery, setPickerQuery] = useState('')
+  // Picker flow: select target first, then write the connection note
+  const [pickerStep, setPickerStep] = useState<'select' | 'note'>('select')
+  const [pickerTarget, setPickerTarget] = useState<LinkedConcept | null>(null)
+  const [pickerNote, setPickerNote] = useState('')
+  // Inline-edit state for an existing link's note
+  const [editingNoteFor, setEditingNoteFor] = useState<string | null>(null)
+  const [editNoteDraft, setEditNoteDraft] = useState('')
 
   const summaryRef = useRef<HTMLTextAreaElement>(null)
   const exampleRef = useRef<HTMLTextAreaElement>(null)
@@ -86,23 +96,57 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
     router.push('/lernen')
   }
 
-  async function addLink(otherId: string) {
+  function closePicker() {
+    setPicking(false)
+    setPickerStep('select')
+    setPickerTarget(null)
+    setPickerQuery('')
+    setPickerNote('')
+  }
+
+  function pickTarget(otherId: string) {
     const other = allOthers.find((c) => c.id === otherId)
     if (!other) return
-    if (linked.some((l) => l.id === otherId)) { setPicking(false); return }
-    setLinked((prev) => [...prev, other])
-    setPicking(false)
-    setPickerQuery('')
+    if (linked.some((l) => l.id === otherId)) { closePicker(); return }
+    setPickerTarget(other)
+    setPickerNote('')
+    setPickerStep('note')
+  }
+
+  async function confirmLink() {
+    if (!pickerTarget) return
+    const target = pickerTarget
+    const noteText = pickerNote.trim() || null
+    setLinked((prev) => [...prev, { ...target, note: noteText }])
+    closePicker()
     await fetch(`/api/concepts/${concept.id}/links`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ other_id: otherId }),
+      body: JSON.stringify({ other_id: target.id, note: noteText }),
     })
   }
 
   async function removeLink(otherId: string) {
     setLinked((prev) => prev.filter((l) => l.id !== otherId))
     await fetch(`/api/concepts/${concept.id}/links?other_id=${otherId}`, { method: 'DELETE' })
+  }
+
+  function startEditNote(linkId: string, current: string | null) {
+    setEditingNoteFor(linkId)
+    setEditNoteDraft(current ?? '')
+  }
+
+  async function saveEditNote() {
+    if (!editingNoteFor) return
+    const otherId = editingNoteFor
+    const next = editNoteDraft.trim() || null
+    setEditingNoteFor(null)
+    setLinked((prev) => prev.map((l) => l.id === otherId ? { ...l, note: next } : l))
+    await fetch(`/api/concepts/${concept.id}/links`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ other_id: otherId, note: next }),
+    })
   }
 
   const linkedIds = useMemo(() => new Set(linked.map((l) => l.id)), [linked])
@@ -224,32 +268,72 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
               Noch keine Verbindungen.
             </p>
           ) : (
-            <div className="space-y-1">
-              {linked.map((l) => (
-                <div key={l.id} className="group flex items-start gap-3 py-2">
-                  <Link
-                    href={`/lernen/${l.id}`}
-                    className="flex-1 min-w-0 hover:text-garden-accent transition-colors"
-                  >
-                    <p className="font-display text-garden-ink truncate" style={{ fontSize: 15, fontWeight: 500 }}>
-                      {l.title || 'Unbenanntes Konzept'}
-                    </p>
-                    {l.summary && (
-                      <p className="font-display italic text-garden-muted text-[13px] line-clamp-1">{l.summary}</p>
-                    )}
-                  </Link>
-                  <button
-                    onClick={() => removeLink(l.id)}
-                    className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-garden-muted-soft hover:text-garden-accent"
-                    title="Verbindung trennen"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-                    </svg>
-                  </button>
-                </div>
-              ))}
+            <div className="space-y-3">
+              {linked.map((l) => {
+                const isEditing = editingNoteFor === l.id
+                return (
+                  <div key={l.id} className="group flex items-start gap-3 py-1">
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/lernen/${l.id}`}
+                        className="block hover:text-garden-accent transition-colors"
+                      >
+                        <p className="font-display text-garden-ink truncate" style={{ fontSize: 15, fontWeight: 500 }}>
+                          {l.title || 'Unbenanntes Konzept'}
+                        </p>
+                        {l.summary && (
+                          <p className="font-display italic text-garden-muted text-[13px] line-clamp-1">{l.summary}</p>
+                        )}
+                      </Link>
+
+                      {/* Connection note — italic, soft, click to edit */}
+                      {isEditing ? (
+                        <textarea
+                          value={editNoteDraft}
+                          onChange={(e) => setEditNoteDraft(e.target.value)}
+                          onBlur={saveEditNote}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Escape') { e.preventDefault(); setEditingNoteFor(null) }
+                            else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveEditNote() }
+                          }}
+                          autoFocus
+                          rows={2}
+                          placeholder="Warum gehören sie zusammen?"
+                          className="w-full mt-1.5 bg-transparent border-l-2 border-garden-accent/40 pl-2 py-1 resize-none outline-none text-garden-muted text-[13px] font-display italic leading-relaxed placeholder:text-garden-muted-soft/70"
+                        />
+                      ) : l.note ? (
+                        <button
+                          onClick={() => startEditNote(l.id, l.note ?? null)}
+                          className="block w-full text-left mt-1.5 border-l-2 border-garden-hairline pl-2 py-0.5 hover:border-garden-accent/40 transition-colors"
+                          title="Klick zum Bearbeiten"
+                        >
+                          <p className="font-display italic text-garden-muted text-[13px] leading-relaxed whitespace-pre-wrap">
+                            {l.note}
+                          </p>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => startEditNote(l.id, null)}
+                          className="font-mono micro-caps text-garden-muted-soft hover:text-garden-accent transition-colors mt-1.5 opacity-0 group-hover:opacity-100"
+                        >
+                          + Notiz, warum
+                        </button>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={() => removeLink(l.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-garden-muted-soft hover:text-garden-accent flex-shrink-0 mt-1"
+                      title="Verbindung trennen"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  </div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -257,56 +341,104 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
         <div className="h-32" />
       </main>
 
-      {/* Link picker modal */}
+      {/* Link picker modal — two steps: select target, then write note */}
       {picking && (
-        <div className="fixed inset-0 z-50 bg-black/30 flex items-start justify-center pt-20 p-4 animate-fade-in" onClick={() => setPicking(false)}>
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-start justify-center pt-20 p-4 animate-fade-in" onClick={closePicker}>
           <div
             className="w-full max-w-md bg-garden-surface rounded-2xl border border-garden-hairline shadow-paper-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-5 py-4 border-b border-garden-hairline">
-              <h3 className="font-display text-garden-ink mb-2" style={{ fontSize: 17, fontWeight: 500 }}>Mit welchem Konzept verbinden?</h3>
-              <input
-                type="text"
-                autoFocus
-                value={pickerQuery}
-                onChange={(e) => setPickerQuery(e.target.value)}
-                placeholder="Suchen…"
-                className="w-full bg-garden-bg border border-garden-hairline rounded-lg px-3 py-1.5 text-[14px] text-garden-ink outline-none focus:border-garden-accent/40"
-              />
-            </div>
-            <div className="max-h-80 overflow-y-auto py-1">
-              {pickerFiltered.length === 0 ? (
-                <div className="px-5 py-6 text-center">
-                  <p className="font-display italic text-garden-muted">
-                    {allOthers.length === 0 ? 'Noch keine anderen Konzepte.' : 'Keine Treffer.'}
-                  </p>
+            {pickerStep === 'select' ? (
+              <>
+                <div className="px-5 py-4 border-b border-garden-hairline">
+                  <h3 className="font-display text-garden-ink mb-2" style={{ fontSize: 17, fontWeight: 500 }}>Mit welchem Konzept verbinden?</h3>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={pickerQuery}
+                    onChange={(e) => setPickerQuery(e.target.value)}
+                    placeholder="Suchen…"
+                    className="w-full bg-garden-bg border border-garden-hairline rounded-lg px-3 py-1.5 text-[14px] text-garden-ink outline-none focus:border-garden-accent/40"
+                  />
                 </div>
-              ) : (
-                pickerFiltered.map((c) => (
+                <div className="max-h-80 overflow-y-auto py-1">
+                  {pickerFiltered.length === 0 ? (
+                    <div className="px-5 py-6 text-center">
+                      <p className="font-display italic text-garden-muted">
+                        {allOthers.length === 0 ? 'Noch keine anderen Konzepte.' : 'Keine Treffer.'}
+                      </p>
+                    </div>
+                  ) : (
+                    pickerFiltered.map((c) => (
+                      <button
+                        key={c.id}
+                        onClick={() => pickTarget(c.id)}
+                        className="w-full text-left px-5 py-2.5 hover:bg-garden-hairline-soft/40 transition-colors"
+                      >
+                        <p className="font-display text-garden-ink truncate" style={{ fontSize: 15, fontWeight: 500 }}>
+                          {c.title || 'Unbenanntes Konzept'}
+                        </p>
+                        {c.summary && (
+                          <p className="font-display italic text-garden-muted text-[13px] line-clamp-1">{c.summary}</p>
+                        )}
+                      </button>
+                    ))
+                  )}
+                </div>
+                <div className="px-5 py-3 border-t border-garden-hairline flex justify-end">
                   <button
-                    key={c.id}
-                    onClick={() => addLink(c.id)}
-                    className="w-full text-left px-5 py-2.5 hover:bg-garden-hairline-soft/40 transition-colors"
+                    onClick={closePicker}
+                    className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
                   >
-                    <p className="font-display text-garden-ink truncate" style={{ fontSize: 15, fontWeight: 500 }}>
-                      {c.title || 'Unbenanntes Konzept'}
-                    </p>
-                    {c.summary && (
-                      <p className="font-display italic text-garden-muted text-[13px] line-clamp-1">{c.summary}</p>
-                    )}
+                    Abbrechen
                   </button>
-                ))
-              )}
-            </div>
-            <div className="px-5 py-3 border-t border-garden-hairline flex justify-end">
-              <button
-                onClick={() => setPicking(false)}
-                className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
-              >
-                Abbrechen
-              </button>
-            </div>
+                </div>
+              </>
+            ) : pickerTarget && (
+              <>
+                <div className="px-5 py-4 border-b border-garden-hairline">
+                  <p className="font-mono micro-caps text-garden-muted-soft mb-2">Verbinden mit</p>
+                  <p className="font-display text-garden-ink" style={{ fontSize: 17, fontWeight: 500 }}>
+                    {pickerTarget.title || 'Unbenanntes Konzept'}
+                  </p>
+                  {pickerTarget.summary && (
+                    <p className="font-display italic text-garden-muted text-[13px] line-clamp-2 mt-1">{pickerTarget.summary}</p>
+                  )}
+                </div>
+                <div className="px-5 py-4">
+                  <label className="font-mono micro-caps text-garden-accent block mb-2">Warum gehören sie zusammen?</label>
+                  <textarea
+                    autoFocus
+                    value={pickerNote}
+                    onChange={(e) => setPickerNote(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); confirmLink() }
+                      if (e.key === 'Escape') { e.preventDefault(); closePicker() }
+                    }}
+                    placeholder="Optional. Aber gerade jetzt fällt es dir am leichtesten."
+                    rows={3}
+                    className="w-full bg-garden-bg border border-garden-hairline rounded-lg px-3 py-2 text-[14px] text-garden-ink outline-none focus:border-garden-accent/40 resize-none font-serif leading-relaxed placeholder:text-garden-muted-soft/70"
+                  />
+                </div>
+                <div className="px-5 py-3 border-t border-garden-hairline flex items-center justify-between">
+                  <button
+                    onClick={() => { setPickerStep('select'); setPickerTarget(null); setPickerNote('') }}
+                    className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
+                  >
+                    ← Zurück
+                  </button>
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono text-[10px] text-garden-muted-soft hidden sm:inline">⌘↵</span>
+                    <button
+                      onClick={confirmLink}
+                      className="font-mono micro-caps text-garden-accent hover:text-garden-accent-deep transition-colors"
+                    >
+                      Verbinden
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
