@@ -32,19 +32,7 @@ function useAutoSize(ref: React.RefObject<HTMLTextAreaElement | null>, value: st
   }, [ref, value])
 }
 
-// Debounced auto-save helper
-function useDebouncedSave(value: string, original: string | null, save: (next: string | null) => Promise<void>) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  useEffect(() => {
-    if (value === (original ?? '')) return
-    if (timer.current) clearTimeout(timer.current)
-    timer.current = setTimeout(() => {
-      save(value.trim() || null)
-    }, 800)
-    return () => { if (timer.current) clearTimeout(timer.current) }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
-}
+type SaveState = 'saved' | 'dirty' | 'saving'
 
 export default function ConceptClient({ initialConcept, initialLinked, allOthers }: Props) {
   const [concept, setConcept] = useState<Concept>(initialConcept)
@@ -75,20 +63,126 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
   useAutoSize(bodyRef, body)
   useAutoSize(sourceRef, source)
 
-  async function patch(updates: Partial<Concept>) {
-    await fetch(`/api/concepts/${concept.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates),
-    })
-    setConcept((c) => ({ ...c, ...updates } as Concept))
+  // ── Save mechanism ────────────────────────────────────────────
+  // Goal: never lose a keystroke, even when navigating away mid-typing.
+  // Three save triggers:
+  //   • debounce (800ms after last change) — invisible auto-save
+  //   • blur on any field — flush immediately when the user moves on
+  //   • Cmd/Ctrl-S or the Speichern button — manual flush
+  // Plus an unmount flush using fetch keepalive so navigating away
+  // mid-typing doesn't drop the pending change.
+  const dirty: boolean =
+    title !== (concept.title ?? '') ||
+    summary !== (concept.summary ?? '') ||
+    ownExample !== (concept.own_example ?? '') ||
+    body !== (concept.body ?? '') ||
+    source !== (concept.source ?? '')
+
+  const [saveState, setSaveState] = useState<SaveState>('saved')
+
+  // Keep the very latest draft accessible from unmount/keepalive paths
+  // without re-binding the cleanup on every keystroke.
+  const draftRef = useRef({ title, summary, ownExample, body, source })
+  draftRef.current = { title, summary, ownExample, body, source }
+  const conceptIdRef = useRef(concept.id)
+  conceptIdRef.current = concept.id
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+
+  function currentUpdates() {
+    const d = draftRef.current
+    return {
+      title: d.title.trim() || null,
+      summary: d.summary.trim() || null,
+      own_example: d.ownExample.trim() || null,
+      body: d.body.trim() || null,
+      source: d.source.trim() || null,
+    }
   }
 
-  useDebouncedSave(title, concept.title, (v) => patch({ title: v }))
-  useDebouncedSave(summary, concept.summary, (v) => patch({ summary: v }))
-  useDebouncedSave(ownExample, concept.own_example, (v) => patch({ own_example: v }))
-  useDebouncedSave(body, concept.body, (v) => patch({ body: v }))
-  useDebouncedSave(source, concept.source, (v) => patch({ source: v }))
+  const savingRef = useRef(false)
+  async function saveNow() {
+    if (savingRef.current) return
+    if (!dirtyRef.current) return
+    savingRef.current = true
+    setSaveState('saving')
+    const updates = currentUpdates()
+    try {
+      const res = await fetch(`/api/concepts/${conceptIdRef.current}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updates),
+      })
+      if (res.ok) {
+        const { concept: updated } = await res.json()
+        setConcept(updated)
+        setSaveState('saved')
+      } else {
+        const err = await res.json().catch(() => ({}))
+        alert(`Speichern fehlgeschlagen: ${err.error ?? res.status}`)
+        setSaveState('dirty')
+      }
+    } catch (e) {
+      alert(`Netzwerkfehler beim Speichern: ${e instanceof Error ? e.message : 'unbekannt'}`)
+      setSaveState('dirty')
+    } finally {
+      savingRef.current = false
+    }
+  }
+
+  // Mark dirty on any change (visible feedback)
+  useEffect(() => {
+    if (dirty) setSaveState((s) => s === 'saving' ? s : 'dirty')
+    else setSaveState('saved')
+  }, [dirty])
+
+  // Debounced auto-save (typing pause)
+  useEffect(() => {
+    if (!dirty) return
+    const t = setTimeout(() => { saveNow() }, 800)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, summary, ownExample, body, source])
+
+  // Cmd/Ctrl-S manual save
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        saveNow()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Unmount flush — keepalive lets the browser finish the request
+  // even after the page is replaced.
+  useEffect(() => {
+    return () => {
+      if (!dirtyRef.current) return
+      const updates = currentUpdates()
+      try {
+        fetch(`/api/concepts/${conceptIdRef.current}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+          keepalive: true,
+        })
+      } catch { /* best effort */ }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Warn on tab close if dirty
+  useEffect(() => {
+    function onBeforeUnload(e: BeforeUnloadEvent) {
+      if (dirtyRef.current) { e.preventDefault(); e.returnValue = '' }
+    }
+    window.addEventListener('beforeunload', onBeforeUnload)
+    return () => window.removeEventListener('beforeunload', onBeforeUnload)
+  }, [])
 
   async function deleteConcept() {
     if (!window.confirm('Konzept löschen? Verbindungen werden mit entfernt.')) return
@@ -117,18 +211,43 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
     if (!pickerTarget) return
     const target = pickerTarget
     const noteText = pickerNote.trim() || null
+    // Optimistic update — revert if the server rejects.
     setLinked((prev) => [...prev, { ...target, note: noteText }])
     closePicker()
-    await fetch(`/api/concepts/${concept.id}/links`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ other_id: target.id, note: noteText }),
-    })
+    try {
+      const res = await fetch(`/api/concepts/${concept.id}/links`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ other_id: target.id, note: noteText }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setLinked((prev) => prev.filter((l) => l.id !== target.id))
+        alert(
+          `Verbindung konnte nicht gespeichert werden: ${err.error ?? res.status}\n\n` +
+          `Falls die Fehlermeldung 'note' erwähnt: Migration 014 noch nicht im Supabase SQL Editor laufen lassen?`
+        )
+      }
+    } catch (e) {
+      setLinked((prev) => prev.filter((l) => l.id !== target.id))
+      alert(`Netzwerkfehler beim Verbinden: ${e instanceof Error ? e.message : 'unbekannt'}`)
+    }
   }
 
   async function removeLink(otherId: string) {
+    const previous = linked
     setLinked((prev) => prev.filter((l) => l.id !== otherId))
-    await fetch(`/api/concepts/${concept.id}/links?other_id=${otherId}`, { method: 'DELETE' })
+    try {
+      const res = await fetch(`/api/concepts/${concept.id}/links?other_id=${otherId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        setLinked(previous)
+        const err = await res.json().catch(() => ({}))
+        alert(`Trennen fehlgeschlagen: ${err.error ?? res.status}`)
+      }
+    } catch (e) {
+      setLinked(previous)
+      alert(`Netzwerkfehler: ${e instanceof Error ? e.message : 'unbekannt'}`)
+    }
   }
 
   function startEditNote(linkId: string, current: string | null) {
@@ -140,13 +259,24 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
     if (!editingNoteFor) return
     const otherId = editingNoteFor
     const next = editNoteDraft.trim() || null
+    const previous = linked
     setEditingNoteFor(null)
     setLinked((prev) => prev.map((l) => l.id === otherId ? { ...l, note: next } : l))
-    await fetch(`/api/concepts/${concept.id}/links`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ other_id: otherId, note: next }),
-    })
+    try {
+      const res = await fetch(`/api/concepts/${concept.id}/links`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ other_id: otherId, note: next }),
+      })
+      if (!res.ok) {
+        setLinked(previous)
+        const err = await res.json().catch(() => ({}))
+        alert(`Notiz speichern fehlgeschlagen: ${err.error ?? res.status}`)
+      }
+    } catch (e) {
+      setLinked(previous)
+      alert(`Netzwerkfehler: ${e instanceof Error ? e.message : 'unbekannt'}`)
+    }
   }
 
   const linkedIds = useMemo(() => new Set(linked.map((l) => l.id)), [linked])
@@ -176,6 +306,30 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
           </Link>
           <span className="font-mono micro-caps text-garden-accent">Konzept</span>
           <span className="h-px flex-1 bg-garden-hairline" />
+          {/* Save status + button */}
+          {saveState === 'saving' ? (
+            <span className="font-mono micro-caps text-garden-muted-soft flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-garden-accent animate-pulse" />
+              speichert…
+            </span>
+          ) : saveState === 'dirty' ? (
+            <button
+              onClick={saveNow}
+              className="font-mono micro-caps text-garden-accent hover:text-garden-accent-deep transition-colors flex items-center gap-1.5"
+              title="Speichern (⌘S)"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-garden-accent" />
+              Speichern
+            </button>
+          ) : (
+            <span className="font-mono micro-caps text-garden-muted-soft flex items-center gap-1.5" title="Alles gespeichert">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              gespeichert
+            </span>
+          )}
           <button
             onClick={deleteConcept}
             className="font-mono micro-caps text-garden-muted hover:text-garden-accent transition-colors"
@@ -191,6 +345,7 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          onBlur={saveNow}
           placeholder="Konzept-Name"
           className="w-full bg-transparent font-display text-garden-ink outline-none border-b border-transparent focus:border-garden-accent/40 placeholder:text-garden-muted-soft/70 transition-colors pb-2"
           style={{ fontSize: 'clamp(24px, 4vw, 36px)', fontWeight: 500, lineHeight: 1.15 }}
@@ -203,6 +358,7 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
               ref={summaryRef}
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
+              onBlur={saveNow}
               placeholder="Wenn du es jetzt jemandem erklären müsstest…"
               rows={1}
               className="w-full bg-transparent resize-none outline-none text-garden-ink placeholder:text-garden-muted-soft/70 font-display italic leading-relaxed"
@@ -215,6 +371,7 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
               ref={exampleRef}
               value={ownExample}
               onChange={(e) => setOwnExample(e.target.value)}
+              onBlur={saveNow}
               placeholder="Etwas Konkretes — eigenes Erlebnis, eigene Analogie, eigene Erfindung."
               rows={2}
               className="w-full bg-transparent resize-none outline-none text-garden-ink placeholder:text-garden-muted-soft/70 font-serif pretty leading-relaxed"
@@ -227,6 +384,7 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
               ref={bodyRef}
               value={body}
               onChange={(e) => setBody(e.target.value)}
+              onBlur={saveNow}
               placeholder="Definition, Modell, Quellenbezug, weiterführende Gedanken…"
               rows={4}
               className="w-full bg-transparent resize-none outline-none text-garden-ink placeholder:text-garden-muted-soft/70 font-serif pretty leading-relaxed"
@@ -239,6 +397,7 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
               ref={sourceRef}
               value={source}
               onChange={(e) => setSource(e.target.value)}
+              onBlur={saveNow}
               placeholder="Buchtitel, Artikel, Podcast, Gespräch…"
               rows={1}
               className="w-full bg-transparent resize-none outline-none text-garden-ink placeholder:text-garden-muted-soft/70 font-mono text-[13px] leading-relaxed"
