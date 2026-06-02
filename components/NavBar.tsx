@@ -13,7 +13,16 @@ const gardenNav = [
 
 const lernenNav = [
   { href: '/lernen', label: 'Konzepte' },
+  { href: '/lernen/leitfragen', label: 'Leitfragen' },
 ]
+
+function isTabActive(href: string, pathname: string): boolean {
+  if (href === '/lernen') {
+    return pathname === '/lernen'
+      || (pathname.startsWith('/lernen/') && !pathname.startsWith('/lernen/leitfragen'))
+  }
+  return pathname.startsWith(href)
+}
 
 export default function NavBar() {
   const pathname = usePathname()
@@ -45,7 +54,7 @@ export default function NavBar() {
       </div>
       <div className="flex items-stretch justify-around max-w-lg mx-auto px-3 h-14">
         {navItems.map(({ href, label }) => {
-          const isActive = pathname.startsWith(href)
+          const isActive = isTabActive(href, pathname)
           return (
             <Link
               key={href}

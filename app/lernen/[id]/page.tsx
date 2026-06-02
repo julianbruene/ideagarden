@@ -52,11 +52,41 @@ export default async function ConceptPage({ params }: Props) {
     .neq('id', id)
     .order('updated_at', { ascending: false })
 
+  // Goals already linked to this concept (with reflections)
+  const { data: goalPairs } = await supabase
+    .from('concept_goals')
+    .select('goal_id, reflection')
+    .eq('concept_id', id)
+    .eq('user_id', user.id)
+
+  const linkedGoalIds = (goalPairs ?? []).map((p) => p.goal_id)
+  let linkedGoals: { id: string; title: string | null; description: string | null; reflection: string | null }[] = []
+  if (linkedGoalIds.length > 0) {
+    const { data: goalRows } = await supabase
+      .from('goals')
+      .select('id, title, description')
+      .in('id', linkedGoalIds)
+    const reflectionByGoal = new Map((goalPairs ?? []).map((p) => [p.goal_id, p.reflection as string | null]))
+    linkedGoals = (goalRows ?? []).map((g) => ({
+      ...g,
+      reflection: reflectionByGoal.get(g.id) ?? null,
+    }))
+  }
+
+  // All goals for the picker
+  const { data: allGoalsRaw } = await supabase
+    .from('goals')
+    .select('id, title, description')
+    .order('updated_at', { ascending: false })
+  const allGoals = (allGoalsRaw ?? []) as { id: string; title: string | null; description: string | null }[]
+
   return (
     <ConceptClient
       initialConcept={concept}
       initialLinked={linked}
       allOthers={(allOthers ?? []) as LinkedConcept[]}
+      initialLinkedGoals={linkedGoals}
+      allGoals={allGoals}
     />
   )
 }

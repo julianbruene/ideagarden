@@ -14,7 +14,19 @@ const gardenNav = [
 
 const lernenNav = [
   { href: '/lernen', label: 'Konzepte', hint: '⌘1' },
+  { href: '/lernen/leitfragen', label: 'Leitfragen', hint: '⌘2' },
 ]
+
+// Active-tab match. Special-cased so /lernen doesn't claim active
+// when we're on /lernen/leitfragen — the nested static route
+// would otherwise be swallowed by the bare /lernen prefix.
+function isTabActive(href: string, pathname: string): boolean {
+  if (href === '/lernen') {
+    return pathname === '/lernen'
+      || (pathname.startsWith('/lernen/') && !pathname.startsWith('/lernen/leitfragen'))
+  }
+  return pathname.startsWith(href)
+}
 
 export default function Sidebar() {
   const pathname = usePathname()
@@ -79,7 +91,7 @@ export default function Sidebar() {
       {/* Tabs */}
       <nav className="px-3 flex flex-col gap-0.5">
         {navItems.map(({ href, label, hint }) => {
-          const isActive = pathname.startsWith(href)
+          const isActive = isTabActive(href, pathname)
           return (
             <Link
               key={href}

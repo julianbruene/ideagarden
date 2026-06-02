@@ -103,6 +103,26 @@ export interface ConceptLink {
   created_at: string
 }
 
+// Standing personal questions ("Wie überwinde ich Overthinking?"). Long-lived.
+export interface Goal {
+  id: string
+  user_id: string
+  title: string | null
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
+// Concept ↔ Goal pairing with a per-pair reflection.
+export interface ConceptGoal {
+  concept_id: string
+  goal_id: string
+  user_id: string
+  reflection: string | null
+  created_at: string
+  updated_at: string
+}
+
 // Handwerk — a permanent snippet (no promote, no AI)
 export interface CraftSnippet {
   id: string

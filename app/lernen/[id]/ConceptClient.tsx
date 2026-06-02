@@ -16,10 +16,22 @@ export interface LinkedConcept {
   note?: string | null
 }
 
+export interface GoalSummary {
+  id: string
+  title: string | null
+  description: string | null
+}
+
+export interface LinkedGoal extends GoalSummary {
+  reflection: string | null
+}
+
 interface Props {
   initialConcept: Concept
   initialLinked: LinkedConcept[]
   allOthers: LinkedConcept[]
+  initialLinkedGoals: LinkedGoal[]
+  allGoals: GoalSummary[]
 }
 
 // Auto-resizing textarea — grows with content, no scrollbars
@@ -34,9 +46,18 @@ function useAutoSize(ref: React.RefObject<HTMLTextAreaElement | null>, value: st
 
 type SaveState = 'saved' | 'dirty' | 'saving'
 
-export default function ConceptClient({ initialConcept, initialLinked, allOthers }: Props) {
+export default function ConceptClient({ initialConcept, initialLinked, allOthers, initialLinkedGoals, allGoals }: Props) {
   const [concept, setConcept] = useState<Concept>(initialConcept)
   const [linked, setLinked] = useState<LinkedConcept[]>(initialLinked)
+  const [linkedGoals, setLinkedGoals] = useState<LinkedGoal[]>(initialLinkedGoals)
+  // Goal picker — two steps like the concept-link picker
+  const [pickingGoal, setPickingGoal] = useState(false)
+  const [goalPickerStep, setGoalPickerStep] = useState<'select' | 'reflection'>('select')
+  const [goalPickerTarget, setGoalPickerTarget] = useState<GoalSummary | null>(null)
+  const [goalPickerReflection, setGoalPickerReflection] = useState('')
+  // Inline reflection edit for an existing linked goal
+  const [editingReflectionFor, setEditingReflectionFor] = useState<string | null>(null)
+  const [editReflectionDraft, setEditReflectionDraft] = useState('')
   const [title, setTitle] = useState(concept.title ?? '')
   const [summary, setSummary] = useState(concept.summary ?? '')
   const [ownExample, setOwnExample] = useState(concept.own_example ?? '')
@@ -290,6 +311,97 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
       })
   }, [allOthers, linkedIds, pickerQuery])
 
+  // ── Goal pairing actions ──────────────────────────────────────
+  const linkedGoalIds = useMemo(() => new Set(linkedGoals.map((g) => g.id)), [linkedGoals])
+  const goalPickerOptions = useMemo(
+    () => allGoals.filter((g) => !linkedGoalIds.has(g.id)),
+    [allGoals, linkedGoalIds],
+  )
+
+  function closeGoalPicker() {
+    setPickingGoal(false)
+    setGoalPickerStep('select')
+    setGoalPickerTarget(null)
+    setGoalPickerReflection('')
+  }
+
+  function pickGoalTarget(goalId: string) {
+    const g = allGoals.find((x) => x.id === goalId)
+    if (!g) return
+    if (linkedGoalIds.has(goalId)) { closeGoalPicker(); return }
+    setGoalPickerTarget(g)
+    setGoalPickerReflection('')
+    setGoalPickerStep('reflection')
+  }
+
+  async function confirmGoalLink() {
+    if (!goalPickerTarget) return
+    const target = goalPickerTarget
+    const reflection = goalPickerReflection.trim() || null
+    setLinkedGoals((prev) => [...prev, { ...target, reflection }])
+    closeGoalPicker()
+    try {
+      const res = await fetch(`/api/concepts/${concept.id}/goals`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal_id: target.id, reflection }),
+      })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setLinkedGoals((prev) => prev.filter((g) => g.id !== target.id))
+        alert(`Leitfrage zuordnen fehlgeschlagen: ${err.error ?? res.status}`)
+      }
+    } catch (e) {
+      setLinkedGoals((prev) => prev.filter((g) => g.id !== target.id))
+      alert(`Netzwerkfehler: ${e instanceof Error ? e.message : 'unbekannt'}`)
+    }
+  }
+
+  async function unlinkGoal(goalId: string) {
+    const previous = linkedGoals
+    setLinkedGoals((prev) => prev.filter((g) => g.id !== goalId))
+    try {
+      const res = await fetch(`/api/concepts/${concept.id}/goals?goal_id=${goalId}`, { method: 'DELETE' })
+      if (!res.ok) {
+        setLinkedGoals(previous)
+        const err = await res.json().catch(() => ({}))
+        alert(`Trennen fehlgeschlagen: ${err.error ?? res.status}`)
+      }
+    } catch (e) {
+      setLinkedGoals(previous)
+      alert(`Netzwerkfehler: ${e instanceof Error ? e.message : 'unbekannt'}`)
+    }
+  }
+
+  function startEditReflection(goalId: string, current: string | null) {
+    setEditingReflectionFor(goalId)
+    setEditReflectionDraft(current ?? '')
+  }
+
+  async function saveEditReflection() {
+    if (!editingReflectionFor) return
+    const goalId = editingReflectionFor
+    const next = editReflectionDraft.trim() || null
+    const previous = linkedGoals
+    setEditingReflectionFor(null)
+    setLinkedGoals((prev) => prev.map((g) => g.id === goalId ? { ...g, reflection: next } : g))
+    try {
+      const res = await fetch(`/api/concepts/${concept.id}/goals`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ goal_id: goalId, reflection: next }),
+      })
+      if (!res.ok) {
+        setLinkedGoals(previous)
+        const err = await res.json().catch(() => ({}))
+        alert(`Reflexion speichern fehlgeschlagen: ${err.error ?? res.status}`)
+      }
+    } catch (e) {
+      setLinkedGoals(previous)
+      alert(`Netzwerkfehler: ${e instanceof Error ? e.message : 'unbekannt'}`)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-garden-bg pb-24 md:pb-0 md:pl-60">
       <header className="sticky top-0 z-30 bg-garden-bg/92 backdrop-blur-md border-b border-garden-hairline pt-safe">
@@ -403,6 +515,106 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
               className="w-full bg-transparent resize-none outline-none text-garden-ink placeholder:text-garden-muted-soft/70 font-mono text-[13px] leading-relaxed"
             />
           </Section>
+        </div>
+
+        {/* Wofür nützlich? — goal pairings with reflections */}
+        <div className="mt-10 pt-6 border-t border-garden-hairline">
+          <div className="flex items-center gap-3 mb-3">
+            <span className="font-mono micro-caps text-garden-accent">Wofür nützlich?</span>
+            <span className="h-px flex-1 bg-garden-hairline" />
+            <button
+              onClick={() => {
+                if (allGoals.length === 0) {
+                  alert('Du hast noch keine Leitfragen. Lege erst eine im Tab "Leitfragen" an.')
+                  return
+                }
+                if (goalPickerOptions.length === 0) {
+                  alert('Du hast diese Konzept-Notiz schon allen deinen Leitfragen zugeordnet.')
+                  return
+                }
+                setPickingGoal(true)
+              }}
+              className="font-mono micro-caps text-garden-accent hover:text-garden-accent-deep transition-colors flex items-center gap-1.5"
+            >
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+              Leitfrage
+            </button>
+          </div>
+
+          {linkedGoals.length === 0 ? (
+            <p className="font-display italic text-garden-muted-soft text-[14px] py-2">
+              Noch keiner Leitfrage zugeordnet.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {linkedGoals.map((g) => {
+                const isEditing = editingReflectionFor === g.id
+                return (
+                  <div key={g.id} className="group">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-1 min-w-0">
+                        <Link
+                          href={`/lernen/leitfragen/${g.id}`}
+                          className="block hover:text-garden-accent transition-colors"
+                        >
+                          <p className="font-display italic text-garden-ink" style={{ fontSize: 15, fontWeight: 500 }}>
+                            {g.title || 'Unbenannte Leitfrage'}
+                          </p>
+                        </Link>
+
+                        {isEditing ? (
+                          <textarea
+                            value={editReflectionDraft}
+                            onChange={(e) => setEditReflectionDraft(e.target.value)}
+                            onBlur={saveEditReflection}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Escape') { e.preventDefault(); setEditingReflectionFor(null) }
+                              else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); saveEditReflection() }
+                            }}
+                            autoFocus
+                            rows={3}
+                            placeholder="Wie hilft dieses Konzept konkret bei dieser Frage?"
+                            className="w-full mt-1.5 bg-transparent border-l-2 border-garden-accent/40 pl-3 py-1 resize-none outline-none text-garden-ink text-[14px] font-serif leading-relaxed placeholder:text-garden-muted-soft/70"
+                          />
+                        ) : g.reflection ? (
+                          <button
+                            onClick={() => startEditReflection(g.id, g.reflection ?? null)}
+                            className="block w-full text-left mt-1.5 border-l-2 border-garden-hairline pl-3 py-0.5 hover:border-garden-accent/40 transition-colors"
+                            title="Klick zum Bearbeiten"
+                          >
+                            <p className="font-serif text-garden-ink text-[14px] leading-relaxed whitespace-pre-wrap pretty">
+                              {g.reflection}
+                            </p>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => startEditReflection(g.id, null)}
+                            className="font-mono micro-caps text-garden-muted-soft hover:text-garden-accent transition-colors mt-1.5 opacity-0 group-hover:opacity-100"
+                          >
+                            + Reflexion, wie es hilft
+                          </button>
+                        )}
+                      </div>
+
+                      <button
+                        onClick={() => unlinkGoal(g.id)}
+                        className="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-garden-muted-soft hover:text-garden-accent flex-shrink-0 mt-1"
+                        title="Von Leitfrage trennen"
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* Connections */}
@@ -593,6 +805,93 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
                       className="font-mono micro-caps text-garden-accent hover:text-garden-accent-deep transition-colors"
                     >
                       Verbinden
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Goal picker — two steps: select Leitfrage, then write reflection */}
+      {pickingGoal && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-start justify-center pt-20 p-4 animate-fade-in" onClick={closeGoalPicker}>
+          <div
+            className="w-full max-w-md bg-garden-surface rounded-2xl border border-garden-hairline shadow-paper-lg overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {goalPickerStep === 'select' ? (
+              <>
+                <div className="px-5 py-4 border-b border-garden-hairline">
+                  <h3 className="font-display text-garden-ink" style={{ fontSize: 17, fontWeight: 500 }}>Welcher Leitfrage zuordnen?</h3>
+                  <p className="font-mono micro-caps text-garden-muted-soft mt-1">Wofür ist dieses Konzept jetzt nützlich?</p>
+                </div>
+                <div className="max-h-80 overflow-y-auto py-1">
+                  {goalPickerOptions.map((g) => (
+                    <button
+                      key={g.id}
+                      onClick={() => pickGoalTarget(g.id)}
+                      className="w-full text-left px-5 py-2.5 hover:bg-garden-hairline-soft/40 transition-colors"
+                    >
+                      <p className="font-display italic text-garden-ink" style={{ fontSize: 15, fontWeight: 500 }}>
+                        {g.title || 'Unbenannte Leitfrage'}
+                      </p>
+                      {g.description && (
+                        <p className="font-display text-garden-muted text-[13px] line-clamp-1 mt-0.5">{g.description}</p>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div className="px-5 py-3 border-t border-garden-hairline flex justify-end">
+                  <button
+                    onClick={closeGoalPicker}
+                    className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
+                  >
+                    Abbrechen
+                  </button>
+                </div>
+              </>
+            ) : goalPickerTarget && (
+              <>
+                <div className="px-5 py-4 border-b border-garden-hairline">
+                  <p className="font-mono micro-caps text-garden-muted-soft mb-2">Zuordnen zu</p>
+                  <p className="font-display italic text-garden-ink" style={{ fontSize: 17, fontWeight: 500 }}>
+                    {goalPickerTarget.title || 'Unbenannte Leitfrage'}
+                  </p>
+                  {goalPickerTarget.description && (
+                    <p className="font-display text-garden-muted text-[13px] line-clamp-2 mt-1">{goalPickerTarget.description}</p>
+                  )}
+                </div>
+                <div className="px-5 py-4">
+                  <label className="font-mono micro-caps text-garden-accent block mb-2">Wie hilft das?</label>
+                  <textarea
+                    autoFocus
+                    value={goalPickerReflection}
+                    onChange={(e) => setGoalPickerReflection(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); confirmGoalLink() }
+                      if (e.key === 'Escape') { e.preventDefault(); closeGoalPicker() }
+                    }}
+                    placeholder="Konkret. So wie ein eigenes Beispiel — wofür ist dieses Konzept jetzt nützlich?"
+                    rows={4}
+                    className="w-full bg-garden-bg border border-garden-hairline rounded-lg px-3 py-2 text-[14px] text-garden-ink outline-none focus:border-garden-accent/40 resize-none font-serif leading-relaxed placeholder:text-garden-muted-soft/70"
+                  />
+                </div>
+                <div className="px-5 py-3 border-t border-garden-hairline flex items-center justify-between">
+                  <button
+                    onClick={() => { setGoalPickerStep('select'); setGoalPickerTarget(null); setGoalPickerReflection('') }}
+                    className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
+                  >
+                    ← Zurück
+                  </button>
+                  <div className="flex items-center gap-4">
+                    <span className="font-mono text-[10px] text-garden-muted-soft hidden sm:inline">⌘↵</span>
+                    <button
+                      onClick={confirmGoalLink}
+                      className="font-mono micro-caps text-garden-accent hover:text-garden-accent-deep transition-colors"
+                    >
+                      Zuordnen
                     </button>
                   </div>
                 </div>
