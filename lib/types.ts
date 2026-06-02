@@ -80,6 +80,27 @@ export interface IdeaWithInputs extends Idea {
   inputs: Input[]
 }
 
+// Lernen — concept notes in your own words (Feynman) + connections
+export interface Concept {
+  id: string
+  user_id: string
+  title: string | null
+  summary: string | null      // one sentence in own words
+  own_example: string | null  // the concrete example that makes it stick
+  body: string | null         // formal/scientific background
+  source: string | null       // where you encountered it
+  created_at: string
+  updated_at: string
+}
+
+// Undirected (stored as a single directed row, queried both ways).
+export interface ConceptLink {
+  from_id: string
+  to_id: string
+  user_id: string
+  created_at: string
+}
+
 // Handwerk — a permanent snippet (no promote, no AI)
 export interface CraftSnippet {
   id: string

@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
-const navItems = [
+const gardenNav = [
   { href: '/dump',     label: 'Dump' },
   { href: '/garden',   label: 'Garden' },
   { href: '/projects', label: 'Projects' },
@@ -11,13 +11,38 @@ const navItems = [
   { href: '/handwerk', label: 'Handwerk' },
 ]
 
+const lernenNav = [
+  { href: '/lernen', label: 'Konzepte' },
+]
+
 export default function NavBar() {
   const pathname = usePathname()
+  const isLernen = pathname.startsWith('/lernen')
+  const navItems = isLernen ? lernenNav : gardenNav
   const settingsActive = pathname.startsWith('/settings')
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-garden-bg/92 backdrop-blur-md pb-safe">
       <div className="h-px w-full bg-garden-hairline-soft" />
+      {/* Workspace switcher row */}
+      <div className="flex items-center justify-center gap-1 py-1 border-b border-garden-hairline-soft">
+        <Link
+          href="/dump"
+          className={`px-3 py-0.5 rounded-full font-mono micro-caps transition-colors ${
+            !isLernen ? 'bg-garden-surface text-garden-ink border border-garden-hairline' : 'text-garden-muted-soft'
+          }`}
+        >
+          Garden
+        </Link>
+        <Link
+          href="/lernen"
+          className={`px-3 py-0.5 rounded-full font-mono micro-caps transition-colors ${
+            isLernen ? 'bg-garden-surface text-garden-ink border border-garden-hairline' : 'text-garden-muted-soft'
+          }`}
+        >
+          Lernen
+        </Link>
+      </div>
       <div className="flex items-stretch justify-around max-w-lg mx-auto px-3 h-14">
         {navItems.map(({ href, label }) => {
           const isActive = pathname.startsWith(href)
@@ -48,7 +73,7 @@ export default function NavBar() {
         {/* Settings — cog icon, dezent */}
         <Link
           href="/settings"
-          className={`px-3 transition-colors ${
+          className={`px-3 flex items-center transition-colors ${
             settingsActive ? 'text-garden-ink' : 'text-garden-muted-soft hover:text-garden-ink'
           }`}
           title="Einstellungen"

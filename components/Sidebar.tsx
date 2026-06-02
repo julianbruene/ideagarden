@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-const navItems = [
+const gardenNav = [
   { href: '/dump',     label: 'Dump',     hint: '⌘1' },
   { href: '/garden',   label: 'Garden',   hint: '⌘2' },
   { href: '/projects', label: 'Projects', hint: '⌘3' },
@@ -12,9 +12,15 @@ const navItems = [
   { href: '/handwerk', label: 'Handwerk', hint: '⌘5' },
 ]
 
+const lernenNav = [
+  { href: '/lernen', label: 'Konzepte', hint: '⌘1' },
+]
+
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const isLernen = pathname.startsWith('/lernen')
+  const navItems = isLernen ? lernenNav : gardenNav
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -26,8 +32,8 @@ export default function Sidebar() {
   return (
     <aside className="hidden md:flex fixed left-0 top-0 h-screen w-60 flex-col bg-garden-bg border-r border-garden-hairline z-30">
       {/* Brand */}
-      <div className="px-6 pt-6 pb-8">
-        <Link href="/dump" className="block">
+      <div className="px-6 pt-6 pb-4">
+        <Link href={isLernen ? '/lernen' : '/dump'} className="block">
           <span className="flex items-baseline gap-2">
             {/* Mark: italic & + coral dot */}
             <span className="relative inline-block" style={{ width: 28, height: 28 }}>
@@ -45,7 +51,29 @@ export default function Sidebar() {
             </span>
           </span>
         </Link>
-        <div className="font-mono micro-caps mt-2 text-garden-muted-soft">v 0.3</div>
+        <div className="font-mono micro-caps mt-2 text-garden-muted-soft">v 0.4</div>
+      </div>
+
+      {/* Workspace switcher */}
+      <div className="px-6 pb-4">
+        <div className="flex items-center gap-1 p-0.5 rounded-full border border-garden-hairline bg-garden-surface">
+          <Link
+            href="/dump"
+            className={`flex-1 text-center py-1 rounded-full font-mono micro-caps transition-colors ${
+              !isLernen ? 'bg-garden-bg text-garden-ink' : 'text-garden-muted-soft hover:text-garden-ink'
+            }`}
+          >
+            Garden
+          </Link>
+          <Link
+            href="/lernen"
+            className={`flex-1 text-center py-1 rounded-full font-mono micro-caps transition-colors ${
+              isLernen ? 'bg-garden-bg text-garden-ink' : 'text-garden-muted-soft hover:text-garden-ink'
+            }`}
+          >
+            Lernen
+          </Link>
+        </div>
       </div>
 
       {/* Tabs */}
