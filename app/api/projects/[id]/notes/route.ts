@@ -10,12 +10,13 @@ export async function POST(req: Request, { params }: Params) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { content, is_section = false } = await req.json() as {
+  const { content, is_section = false, is_open_point = false } = await req.json() as {
     content?: string
     is_section?: boolean
+    is_open_point?: boolean
   }
-  // Both sections and notes may be created empty for inline-edit flows.
-  // The client opens the new row in edit mode and the user types right away.
+  // Sections, notes, and open points may be created empty for inline-edit
+  // flows. The client opens the new row in edit mode and the user types.
 
   const { data, error } = await supabase
     .from('inputs')
@@ -27,6 +28,7 @@ export async function POST(req: Request, { params }: Params) {
       role: 'user',
       is_note: true,
       is_section,
+      is_open_point,
     })
     .select()
     .single()

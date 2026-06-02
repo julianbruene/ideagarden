@@ -29,6 +29,7 @@ interface Props {
   book: Project
   initialChapters: Project[]
   initialBookNotes: InputRow[]
+  initialOpenPoints: InputRow[]
 }
 
 // ── Progress state ────────────────────────────────────────────────
@@ -208,25 +209,46 @@ function ChapterPicker({ chapters, onPick, onClose }: PickerProps) {
 }
 
 // ── Offene Punkte slide-out panel ────────────────────────────────
-// (DB column stays `roter_faden` — UI label only.)
+// Cards (one row per point) — mirrors the Outline note style.
 interface OffenePunkteProps {
   open: boolean
-  value: string
-  onChange: (s: string) => void
+  points: InputRow[]
+  draft: string
+  setDraft: (s: string) => void
+  draftRef: React.RefObject<HTMLTextAreaElement | null>
+  adding: boolean
+  onAdd: () => void
+  editingId: string | null
+  editDraft: string
+  setEditDraft: (s: string) => void
+  onStartEdit: (p: InputRow) => void
+  onSaveEdit: () => void
+  onCancelEdit: () => void
+  onDelete: (id: string) => void
   onClose: () => void
 }
-function OffenePunkte({ open, value, onChange, onClose }: OffenePunkteProps) {
+function OffenePunkte({
+  open, points, draft, setDraft, draftRef, adding, onAdd,
+  editingId, editDraft, setEditDraft, onStartEdit, onSaveEdit, onCancelEdit, onDelete,
+  onClose,
+}: OffenePunkteProps) {
   return (
     <div
-      className={`fixed inset-y-0 right-0 z-40 w-full md:w-96 bg-garden-surface border-l border-garden-hairline shadow-paper-lg transform transition-transform duration-300 ${
+      className={`fixed inset-y-0 right-0 z-40 w-full md:w-[28rem] bg-garden-bg border-l border-garden-hairline shadow-paper-lg transform transition-transform duration-300 ${
         open ? 'translate-x-0' : 'translate-x-full'
       }`}
       aria-hidden={!open}
     >
       <div className="h-full flex flex-col">
-        <div className="flex-shrink-0 px-5 py-4 border-b border-garden-hairline flex items-start justify-between gap-3">
+        {/* Header */}
+        <div className="flex-shrink-0 px-5 py-4 border-b border-garden-hairline flex items-start justify-between gap-3 bg-garden-surface">
           <div>
-            <p className="font-mono micro-caps text-garden-accent">Offene Punkte</p>
+            <div className="flex items-center gap-2">
+              <p className="font-mono micro-caps text-garden-accent">Offene Punkte</p>
+              <span className="font-mono micro-caps text-garden-muted-soft">
+                {points.length === 0 ? '—' : points.length}
+              </span>
+            </div>
             <p className="font-display italic text-garden-muted text-[13px] mt-1 leading-relaxed">
               Fragen, Stichworte, Unsicheres — alles, was wichtig sein könnte, aber noch kein Kapitel hat.
             </p>
@@ -241,14 +263,102 @@ function OffenePunkte({ open, value, onChange, onClose }: OffenePunkteProps) {
             </svg>
           </button>
         </div>
-        <div className="flex-1 overflow-y-auto p-5">
-          <textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="– Frage an mich selbst…&#10;– Stelle, die ich nochmal prüfen muss…&#10;– Wo gehört das hin?"
-            className="w-full h-full min-h-[400px] bg-transparent resize-none outline-none text-garden-ink placeholder:text-garden-muted-soft/70 font-serif pretty leading-relaxed"
-            style={{ fontSize: 15 }}
-          />
+
+        {/* Add input */}
+        <form
+          onSubmit={(e) => { e.preventDefault(); onAdd() }}
+          className="flex-shrink-0 px-5 py-3 border-b border-garden-hairline bg-garden-surface"
+        >
+          <div className="bg-garden-bg rounded-xl border border-garden-hairline focus-within:border-garden-accent/50 focus-within:ring-2 focus-within:ring-garden-accent/10 transition-all">
+            <textarea
+              ref={draftRef}
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); onAdd() }
+              }}
+              placeholder="Neuer offener Punkt — Frage, Stichwort, Zweifel…"
+              rows={2}
+              disabled={adding}
+              className="w-full bg-transparent resize-none outline-none px-3 py-2 text-garden-ink placeholder:text-garden-muted-soft/70 font-serif leading-relaxed"
+              style={{ fontSize: 14 }}
+            />
+            <div className="flex items-center justify-between px-2 pb-1.5">
+              <span className="font-mono text-[10px] text-garden-muted-soft">↵ speichern · ⇧↵ Zeilenumbruch</span>
+              <button
+                type="submit"
+                disabled={!draft.trim() || adding}
+                title="Speichern"
+                className="w-6 h-6 rounded-full flex items-center justify-center bg-garden-accent text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-garden-accent-deep transition-colors"
+              >
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </form>
+
+        {/* Card list */}
+        <div className="flex-1 overflow-y-auto p-5 space-y-2">
+          {points.length === 0 ? (
+            <div className="text-center py-10">
+              <p className="font-display text-2xl text-garden-muted-soft mb-2" style={{ fontWeight: 400 }}>—</p>
+              <p className="font-display italic text-garden-muted">Noch keine offenen Punkte.</p>
+            </div>
+          ) : (
+            points.map((p) => {
+              const isEditing = editingId === p.id
+              return (
+                <div
+                  key={p.id}
+                  className="group relative bg-garden-surface rounded-xl border border-garden-hairline hover:border-garden-accent/30 transition-all overflow-hidden animate-fade-in"
+                >
+                  {isEditing ? (
+                    <textarea
+                      value={editDraft}
+                      onChange={(e) => setEditDraft(e.target.value)}
+                      onBlur={onSaveEdit}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape') { e.preventDefault(); onCancelEdit() }
+                        else if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); onSaveEdit() }
+                      }}
+                      autoFocus
+                      rows={Math.max(2, Math.min(10, editDraft.split('\n').length + 1))}
+                      className="w-full bg-white border-b border-garden-accent/30 px-3 py-2.5 text-garden-ink leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/10"
+                      style={{ fontSize: 14 }}
+                    />
+                  ) : (
+                    <button
+                      onClick={() => onStartEdit(p)}
+                      className="w-full text-left px-3 py-2.5 hover:bg-white/40 transition-colors"
+                      title="Klick zum Bearbeiten"
+                    >
+                      <p
+                        className="text-garden-ink leading-relaxed whitespace-pre-wrap break-words font-serif"
+                        style={{ fontSize: 14 }}
+                      >
+                        {p.content}
+                      </p>
+                    </button>
+                  )}
+                  {!isEditing && (
+                    <button
+                      onClick={() => onDelete(p.id)}
+                      className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity p-1 text-garden-muted-soft hover:text-garden-accent rounded"
+                      title="Löschen"
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              )
+            })
+          )}
         </div>
       </div>
     </div>
@@ -256,16 +366,20 @@ function OffenePunkte({ open, value, onChange, onClose }: OffenePunkteProps) {
 }
 
 // ── Main component ───────────────────────────────────────────────
-export default function BookDetailClient({ book: initialBook, initialChapters, initialBookNotes }: Props) {
+export default function BookDetailClient({ book: initialBook, initialChapters, initialBookNotes, initialOpenPoints }: Props) {
   const [book, setBook] = useState<Project>(initialBook)
   const [chapters, setChapters] = useState<Project[]>(initialChapters)
   const [bookNotes, setBookNotes] = useState<InputRow[]>(initialBookNotes)
+  const [openPoints, setOpenPoints] = useState<InputRow[]>(initialOpenPoints)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(book.title ?? '')
   const [kernideeDraft, setKernideeDraft] = useState(book.kernidee ?? '')
   const [zielleserDraft, setZielleserDraft] = useState(book.zielleser ?? '')
-  const [fadenDraft, setFadenDraft] = useState(book.roter_faden ?? '')
   const [fadenOpen, setFadenOpen] = useState(false)
+  const [openPointDraft, setOpenPointDraft] = useState('')
+  const [addingOpenPoint, setAddingOpenPoint] = useState(false)
+  const [editingPointId, setEditingPointId] = useState<string | null>(null)
+  const [editPointDraft, setEditPointDraft] = useState('')
   const [noteDraft, setNoteDraft] = useState('')
   const [submittingNote, setSubmittingNote] = useState(false)
   const [pickingFor, setPickingFor] = useState<string | null>(null)
@@ -274,9 +388,10 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
   const [completing, setCompleting] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const noteRef = useRef<HTMLTextAreaElement>(null)
+  const openPointRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
 
-  // Debounced auto-save for the three free-text fields
+  // Debounced auto-save for the two header free-text fields
   function useDebouncedSave(value: string, original: string | null, field: keyof Project) {
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
     useEffect(() => {
@@ -297,7 +412,60 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
   }
   useDebouncedSave(kernideeDraft, book.kernidee, 'kernidee')
   useDebouncedSave(zielleserDraft, book.zielleser ?? null, 'zielleser')
-  useDebouncedSave(fadenDraft, book.roter_faden ?? null, 'roter_faden')
+
+  // ── Open Points actions ───────────────────────────────────────
+  async function addOpenPoint(e?: React.FormEvent) {
+    e?.preventDefault()
+    const trimmed = openPointDraft.trim()
+    if (!trimmed || addingOpenPoint) return
+    setAddingOpenPoint(true)
+    try {
+      const res = await fetch(`/api/projects/${book.id}/notes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content: trimmed, is_open_point: true }),
+      })
+      if (res.ok) {
+        const { input } = await res.json()
+        setOpenPoints((prev) => [input, ...prev])
+        setOpenPointDraft('')
+        openPointRef.current?.focus()
+      }
+    } finally {
+      setAddingOpenPoint(false)
+    }
+  }
+
+  function startEditPoint(p: InputRow) {
+    setEditingPointId(p.id)
+    setEditPointDraft(p.content)
+  }
+
+  async function saveEditPoint() {
+    if (!editingPointId) return
+    const trimmed = editPointDraft.trim()
+    const original = openPoints.find((p) => p.id === editingPointId)
+    setEditingPointId(null)
+    if (!original) return
+    // Empty edit deletes the row (matches Outline behaviour)
+    if (!trimmed) {
+      setOpenPoints((prev) => prev.filter((p) => p.id !== original.id))
+      await fetch(`/api/inputs/${original.id}`, { method: 'DELETE' })
+      return
+    }
+    if (trimmed === original.content) return
+    setOpenPoints((prev) => prev.map((p) => p.id === original.id ? { ...p, content: trimmed } : p))
+    await fetch(`/api/inputs/${original.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: trimmed }),
+    })
+  }
+
+  async function deleteOpenPoint(id: string) {
+    setOpenPoints((prev) => prev.filter((p) => p.id !== id))
+    await fetch(`/api/inputs/${id}`, { method: 'DELETE' })
+  }
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -740,8 +908,19 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
 
       <OffenePunkte
         open={fadenOpen}
-        value={fadenDraft}
-        onChange={setFadenDraft}
+        points={openPoints}
+        draft={openPointDraft}
+        setDraft={setOpenPointDraft}
+        draftRef={openPointRef}
+        adding={addingOpenPoint}
+        onAdd={addOpenPoint}
+        editingId={editingPointId}
+        editDraft={editPointDraft}
+        setEditDraft={setEditPointDraft}
+        onStartEdit={startEditPoint}
+        onSaveEdit={saveEditPoint}
+        onCancelEdit={() => setEditingPointId(null)}
+        onDelete={deleteOpenPoint}
         onClose={() => setFadenOpen(false)}
       />
 

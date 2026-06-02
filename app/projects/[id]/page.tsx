@@ -21,9 +21,9 @@ export default async function ProjectDetailPage({ params }: Props) {
 
   if (!project) notFound()
 
-  // Books: load chapters + book-level notes (Book Dump)
+  // Books: load chapters + book-level notes (Book Dump) + open points
   if (project.kind === 'book') {
-    const [{ data: chapters }, { data: bookNotes }] = await Promise.all([
+    const [{ data: chapters }, { data: allNotes }] = await Promise.all([
       supabase
         .from('projects')
         .select('*')
@@ -37,11 +37,16 @@ export default async function ProjectDetailPage({ params }: Props) {
         .order('created_at', { ascending: false }),
     ])
 
+    // Split the single fetch into the two book-level lists.
+    const bookNotes = (allNotes ?? []).filter((n) => !n.is_open_point)
+    const openPoints = (allNotes ?? []).filter((n) => n.is_open_point)
+
     return (
       <BookDetailClient
         book={project}
         initialChapters={chapters ?? []}
-        initialBookNotes={bookNotes ?? []}
+        initialBookNotes={bookNotes}
+        initialOpenPoints={openPoints}
       />
     )
   }

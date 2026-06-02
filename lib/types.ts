@@ -37,6 +37,10 @@ export interface Input {
   role: InputRole
   is_note?: boolean
   is_section?: boolean
+  // Book-level open point — a question/uncertainty/TODO with no
+  // chapter yet. Lives alongside Book Dump notes, distinguished
+  // by this flag.
+  is_open_point?: boolean
   starred?: boolean
   image_transcript?: string | null
   mirror_source_id?: string | null
