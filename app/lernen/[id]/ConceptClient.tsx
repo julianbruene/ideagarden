@@ -57,11 +57,13 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
   const summaryRef = useRef<HTMLTextAreaElement>(null)
   const exampleRef = useRef<HTMLTextAreaElement>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
+  const sourceRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
 
   useAutoSize(summaryRef, summary)
   useAutoSize(exampleRef, ownExample)
   useAutoSize(bodyRef, body)
+  useAutoSize(sourceRef, source)
 
   async function patch(updates: Partial<Concept>) {
     await fetch(`/api/concepts/${concept.id}`, {
@@ -189,12 +191,13 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
           </Section>
 
           <Section label="Quelle">
-            <input
-              type="text"
+            <textarea
+              ref={sourceRef}
               value={source}
               onChange={(e) => setSource(e.target.value)}
               placeholder="Buchtitel, Artikel, Podcast, Gespräch…"
-              className="w-full bg-transparent outline-none text-garden-ink placeholder:text-garden-muted-soft/70 font-mono text-[13px]"
+              rows={1}
+              className="w-full bg-transparent resize-none outline-none text-garden-ink placeholder:text-garden-muted-soft/70 font-mono text-[13px] leading-relaxed"
             />
           </Section>
         </div>
