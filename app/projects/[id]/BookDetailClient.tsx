@@ -207,14 +207,15 @@ function ChapterPicker({ chapters, onPick, onClose }: PickerProps) {
   )
 }
 
-// ── Roter Faden slide-out panel ──────────────────────────────────
-interface FadenProps {
+// ── Offene Punkte slide-out panel ────────────────────────────────
+// (DB column stays `roter_faden` — UI label only.)
+interface OffenePunkteProps {
   open: boolean
   value: string
   onChange: (s: string) => void
   onClose: () => void
 }
-function RoterFaden({ open, value, onChange, onClose }: FadenProps) {
+function OffenePunkte({ open, value, onChange, onClose }: OffenePunkteProps) {
   return (
     <div
       className={`fixed inset-y-0 right-0 z-40 w-full md:w-96 bg-garden-surface border-l border-garden-hairline shadow-paper-lg transform transition-transform duration-300 ${
@@ -225,9 +226,9 @@ function RoterFaden({ open, value, onChange, onClose }: FadenProps) {
       <div className="h-full flex flex-col">
         <div className="flex-shrink-0 px-5 py-4 border-b border-garden-hairline flex items-start justify-between gap-3">
           <div>
-            <p className="font-mono micro-caps text-garden-accent">Roter Faden</p>
+            <p className="font-mono micro-caps text-garden-accent">Offene Punkte</p>
             <p className="font-display italic text-garden-muted text-[13px] mt-1 leading-relaxed">
-              Begriffe, Bilder, Argumente — was durch das ganze Buch zieht.
+              Fragen, Stichworte, Unsicheres — alles, was wichtig sein könnte, aber noch kein Kapitel hat.
             </p>
           </div>
           <button
@@ -244,7 +245,7 @@ function RoterFaden({ open, value, onChange, onClose }: FadenProps) {
           <textarea
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Eine wiederkehrende Metapher. Ein Begriff, der immer wiederkommt. Ein Argument, das sich durchzieht…"
+            placeholder="– Frage an mich selbst…&#10;– Stelle, die ich nochmal prüfen muss…&#10;– Wo gehört das hin?"
             className="w-full h-full min-h-[400px] bg-transparent resize-none outline-none text-garden-ink placeholder:text-garden-muted-soft/70 font-serif pretty leading-relaxed"
             style={{ fontSize: 15 }}
           />
@@ -714,30 +715,30 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
         </div>
       </section>
 
-      {/* ── Roter Faden edge tab ── */}
+      {/* ── Offene Punkte edge tab ── */}
       <button
         onClick={() => setFadenOpen(true)}
         className="hidden md:flex fixed right-0 top-1/2 -translate-y-1/2 z-30 items-center gap-1 py-3 px-2 bg-garden-surface border-y border-l border-garden-hairline rounded-l-lg text-garden-accent hover:text-garden-accent-deep hover:bg-garden-accent-soft transition-colors shadow-paper"
-        title="Roter Faden öffnen"
+        title="Offene Punkte öffnen"
       >
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
           strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
           <polyline points="15 18 9 12 15 6" />
         </svg>
-        <span className="font-mono micro-caps" style={{ writingMode: 'vertical-rl' }}>Roter Faden</span>
+        <span className="font-mono micro-caps" style={{ writingMode: 'vertical-rl' }}>Offene Punkte</span>
       </button>
 
       {/* Mobile: small floating button in the corner */}
       <button
         onClick={() => setFadenOpen(true)}
         className="md:hidden fixed bottom-20 right-4 z-30 px-3 py-2 rounded-full bg-garden-surface border border-garden-hairline shadow-paper-lg text-garden-accent flex items-center gap-1.5"
-        title="Roter Faden"
+        title="Offene Punkte"
       >
         <span className="w-1.5 h-1.5 rounded-full bg-garden-accent" />
-        <span className="font-mono micro-caps">Faden</span>
+        <span className="font-mono micro-caps">Offen</span>
       </button>
 
-      <RoterFaden
+      <OffenePunkte
         open={fadenOpen}
         value={fadenDraft}
         onChange={setFadenDraft}
