@@ -152,7 +152,7 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
 
         {/* Sections */}
         <div className="mt-8 space-y-7">
-          <Section label="In einem Satz" hint="Die Essenz, in deinen Worten — der Feynman-Test.">
+          <Section label="In einem Satz">
             <textarea
               ref={summaryRef}
               value={summary}
@@ -164,7 +164,7 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
             />
           </Section>
 
-          <Section label="Eigenes Beispiel" hint="Der Fall, den du nicht vergisst.">
+          <Section label="Eigenes Beispiel">
             <textarea
               ref={exampleRef}
               value={ownExample}
@@ -176,7 +176,7 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
             />
           </Section>
 
-          <Section label="Hintergrund" hint="Wissenschaftlich, formal, lang. Hier darfs sperrig sein.">
+          <Section label="Hintergrund">
             <textarea
               ref={bodyRef}
               value={body}
@@ -188,7 +188,7 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
             />
           </Section>
 
-          <Section label="Quelle" hint="Wo hast du das gelernt?">
+          <Section label="Quelle">
             <input
               type="text"
               value={source}
@@ -314,13 +314,10 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
   )
 }
 
-function Section({ label, hint, children }: { label: string; hint: string; children: React.ReactNode }) {
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="flex items-baseline gap-2 mb-1">
-        <label className="font-mono micro-caps text-garden-accent">{label}</label>
-        <span className="font-display italic text-garden-muted-soft text-[12px]">— {hint}</span>
-      </div>
+      <label className="font-mono micro-caps text-garden-accent block mb-1">{label}</label>
       {children}
     </div>
   )
