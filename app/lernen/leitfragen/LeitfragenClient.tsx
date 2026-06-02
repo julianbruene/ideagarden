@@ -63,7 +63,7 @@ export default function LeitfragenClient({ initialGoals, countMap }: Props) {
             Deine stehenden <em className="text-garden-accent" style={{ fontWeight: 500, fontStyle: 'italic' }}>Fragen.</em>
           </h1>
           <p className="font-display italic text-garden-muted mt-3 text-[15px] leading-relaxed">
-            Fragen, die du seit Jahren mit dir rumträgst — und wofür Konzepte konkret helfen sollen.
+            Worauf willst du Menschen Antworten geben? Und welche Konzepte helfen dir, das zu tun?
           </p>
         </div>
       </header>
@@ -74,7 +74,7 @@ export default function LeitfragenClient({ initialGoals, countMap }: Props) {
             <p className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</p>
             <p className="font-display italic text-garden-muted">Noch keine Leitfragen.</p>
             <p className="font-mono text-[11px] text-garden-muted-soft mt-2">
-              Was ist deine stehende Frage — wofür sollen die Konzepte arbeiten?
+              Was willst du Menschen mitgeben? Wofür sollen die Konzepte arbeiten?
             </p>
             <button
               onClick={createGoal}

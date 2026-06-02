@@ -576,7 +576,7 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
                             }}
                             autoFocus
                             rows={3}
-                            placeholder="Wie hilft dieses Konzept konkret bei dieser Frage?"
+                            placeholder="Wie hilft dir dieses Konzept, deine Antwort zu schärfen?"
                             className="w-full mt-1.5 bg-transparent border-l-2 border-garden-accent/40 pl-3 py-1 resize-none outline-none text-garden-ink text-[14px] font-serif leading-relaxed placeholder:text-garden-muted-soft/70"
                           />
                         ) : g.reflection ? (
@@ -873,7 +873,7 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
                       if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); confirmGoalLink() }
                       if (e.key === 'Escape') { e.preventDefault(); closeGoalPicker() }
                     }}
-                    placeholder="Konkret. So wie ein eigenes Beispiel — wofür ist dieses Konzept jetzt nützlich?"
+                    placeholder="Wie hilft dir dieses Konzept, deine Antwort auf diese Frage zu schärfen?"
                     rows={4}
                     className="w-full bg-garden-bg border border-garden-hairline rounded-lg px-3 py-2 text-[14px] text-garden-ink outline-none focus:border-garden-accent/40 resize-none font-serif leading-relaxed placeholder:text-garden-muted-soft/70"
                   />
