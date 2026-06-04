@@ -18,18 +18,23 @@ export async function POST(req: Request, { params }: Params) {
   // Sections, notes, and open points may be created empty for inline-edit
   // flows. The client opens the new row in edit mode and the user types.
 
+  // Only include is_open_point when actually true. Sending `false`
+  // would still hit the column — which fails if migration 012 hasn't
+  // run yet. Plain notes work either way; open points require 012.
+  const insertData: Record<string, unknown> = {
+    project_id: id,
+    idea_id: null,
+    user_id: user.id,
+    content: (content ?? '').trim(),
+    role: 'user',
+    is_note: true,
+    is_section,
+  }
+  if (is_open_point) insertData.is_open_point = true
+
   const { data, error } = await supabase
     .from('inputs')
-    .insert({
-      project_id: id,
-      idea_id: null,
-      user_id: user.id,
-      content: (content ?? '').trim(),
-      role: 'user',
-      is_note: true,
-      is_section,
-      is_open_point,
-    })
+    .insert(insertData)
     .select()
     .single()
 
