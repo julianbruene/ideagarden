@@ -13,8 +13,8 @@ const gardenNav = [
 ]
 
 const lernenNav = [
-  { href: '/lernen', label: 'Konzepte', hint: '⌘1' },
-  { href: '/lernen/leitfragen', label: 'Leitfragen', hint: '⌘2' },
+  { href: '/lernen/leitfragen', label: 'Leitfragen', hint: '⌘1' },
+  { href: '/lernen', label: 'Konzepte', hint: '⌘2' },
 ]
 
 // Active-tab match. Special-cased so /lernen doesn't claim active

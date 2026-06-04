@@ -42,7 +42,7 @@ export default function LeitfragenClient({ initialGoals, countMap }: Props) {
       <header className="px-6 md:px-12 page-header-pt pb-6 md:pb-8 border-b border-garden-hairline">
         <div className="max-w-2xl md:max-w-3xl mx-auto md:mx-0">
           <div className="flex items-center gap-3 mb-3">
-            <span className="font-mono micro-caps text-garden-muted-soft">L02 · Leitfragen</span>
+            <span className="font-mono micro-caps text-garden-muted-soft">L00 · Leitfragen</span>
             <span className="h-px flex-1 bg-garden-hairline" />
             <button
               onClick={createGoal}

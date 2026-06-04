@@ -12,8 +12,8 @@ const gardenNav = [
 ]
 
 const lernenNav = [
-  { href: '/lernen', label: 'Konzepte' },
   { href: '/lernen/leitfragen', label: 'Leitfragen' },
+  { href: '/lernen', label: 'Konzepte' },
 ]
 
 function isTabActive(href: string, pathname: string): boolean {
