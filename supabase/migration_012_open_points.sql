@@ -16,21 +16,35 @@ CREATE INDEX IF NOT EXISTS inputs_open_points_idx
   ON inputs (project_id)
   WHERE is_open_point = TRUE;
 
--- Backfill: every non-empty line of an existing book's roter_faden
--- becomes a separate open-point row. is_note stays true so the row
--- looks like a normal book-level note, just flagged.
-INSERT INTO inputs (project_id, idea_id, user_id, content, role, is_note, is_open_point)
-SELECT
-  p.id,
-  NULL,
-  p.user_id,
-  trim(line),
-  'user',
-  TRUE,
-  TRUE
-FROM projects p
-CROSS JOIN LATERAL regexp_split_to_table(p.roter_faden, E'\n') AS line
-WHERE p.kind = 'book'
-  AND p.roter_faden IS NOT NULL
-  AND length(trim(p.roter_faden)) > 0
-  AND length(trim(line)) > 0;
+-- Backfill — only runs if migration 011 (which added the
+-- projects.roter_faden column) has already been applied. This makes
+-- 012 safe to run regardless of order; without 011 there's simply
+-- nothing to migrate.
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name  = 'projects'
+      AND column_name = 'roter_faden'
+  ) THEN
+    EXECUTE $sql$
+      INSERT INTO inputs (project_id, idea_id, user_id, content, role, is_note, is_open_point)
+      SELECT
+        p.id,
+        NULL,
+        p.user_id,
+        trim(line),
+        'user',
+        TRUE,
+        TRUE
+      FROM projects p
+      CROSS JOIN LATERAL regexp_split_to_table(p.roter_faden, E'\n') AS line
+      WHERE p.kind = 'book'
+        AND p.roter_faden IS NOT NULL
+        AND length(trim(p.roter_faden)) > 0
+        AND length(trim(line)) > 0;
+    $sql$;
+  END IF;
+END $$;
