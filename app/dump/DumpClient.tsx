@@ -7,6 +7,7 @@ import Sidebar from '@/components/Sidebar'
 import NodeCard from '@/components/NodeCard'
 import DumpInput from '@/components/DumpInput'
 import IdeaSexModal from '@/components/IdeaSexModal'
+import SendToProjectModal from '@/components/SendToProjectModal'
 import type { IdeaNode } from '@/lib/types'
 
 interface Props {
@@ -21,6 +22,8 @@ export default function DumpClient({ initialNodes }: Props) {
   const [ideaSexPair, setIdeaSexPair] = useState<[string, string] | undefined>()
   // Heart: up to 2 nodes pre-selected for Idea Sex
   const [hearted, setHearted] = useState<Set<string>>(new Set())
+  // Node currently being sent to a project (opens the picker)
+  const [sendToProjectFor, setSendToProjectFor] = useState<string | null>(null)
   const router = useRouter()
 
   function handleNodeCreated(node: IdeaNode) {
@@ -53,6 +56,45 @@ export default function DumpClient({ initialNodes }: Props) {
       router.push(`/garden/${data.idea.id}`)
     } catch (err) {
       console.error('[promote] network error:', err)
+      alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  async function handleSendToProject(nodeId: string, projectId: string) {
+    setSendToProjectFor(null)
+    const snapshot = nodes
+    setNodes((prev) => prev.filter((n) => n.id !== nodeId))
+    setHearted((prev) => { const next = new Set(prev); next.delete(nodeId); return next })
+    try {
+      const res = await fetch(`/api/nodes/${nodeId}/to-project`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: projectId }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setNodes(snapshot)
+        alert(`In Projekt schicken fehlgeschlagen: ${data?.error ?? res.status}`)
+      }
+    } catch (err) {
+      setNodes(snapshot)
+      alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }
+
+  async function handleArchive(nodeId: string) {
+    const snapshot = nodes
+    setNodes((prev) => prev.filter((n) => n.id !== nodeId))
+    setHearted((prev) => { const next = new Set(prev); next.delete(nodeId); return next })
+    try {
+      const res = await fetch(`/api/nodes/${nodeId}/archive`, { method: 'POST' })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setNodes(snapshot)
+        alert(`Ins Archiv schicken fehlgeschlagen: ${data?.error ?? res.status}`)
+      }
+    } catch (err) {
+      setNodes(snapshot)
       alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
     }
   }
@@ -239,6 +281,8 @@ export default function DumpClient({ initialNodes }: Props) {
               onDelete={() => handleDelete(node.id)}
               onPromote={() => handlePromote(node.id)}
               onHeart={() => toggleHeart(node.id)}
+              onSendToProject={() => setSendToProjectFor(node.id)}
+              onArchive={() => handleArchive(node.id)}
               onNodeUpdated={(updated) => setNodes((prev) => prev.map((n) => n.id === updated.id ? updated : n))}
             />
           ))}
@@ -254,6 +298,13 @@ export default function DumpClient({ initialNodes }: Props) {
           preselected={ideaSexPair}
           onClose={() => { setShowIdeaSex(false); setHearted(new Set()) }}
           onNodeCreated={handleNodeCreated}
+        />
+      )}
+
+      {sendToProjectFor && (
+        <SendToProjectModal
+          onPick={(projectId) => handleSendToProject(sendToProjectFor, projectId)}
+          onClose={() => setSendToProjectFor(null)}
         />
       )}
     </div>

@@ -14,6 +14,8 @@ interface Props {
   selectionMode?: boolean
   hearted?: boolean
   onHeart?: () => void
+  onSendToProject?: () => void
+  onArchive?: () => void
 }
 
 function formatDate(iso: string) {
@@ -26,13 +28,14 @@ function formatDate(iso: string) {
   return d.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })
 }
 
-export default function NodeCard({ node, selected, onSelect, onDelete, onPromote, onNodeUpdated, selectionMode, hearted, onHeart }: Props) {
+export default function NodeCard({ node, selected, onSelect, onDelete, onPromote, onNodeUpdated, selectionMode, hearted, onHeart, onSendToProject, onArchive }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [promoting, setPromoting] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
   const [transcribeError, setTranscribeError] = useState(false)
   const [editingField, setEditingField] = useState<null | 'content' | 'transcript'>(null)
   const [editDraft, setEditDraft] = useState('')
+  const [menuOpen, setMenuOpen] = useState(false)
   const editRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
@@ -317,7 +320,7 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
           <button
             onClick={(e) => { e.stopPropagation(); onDelete?.() }}
             title="Löschen"
-            className="flex items-center justify-center px-3.5 py-2.5 text-garden-muted hover:text-garden-danger hover:bg-garden-danger-light transition-colors rounded-br-2xl"
+            className="flex items-center justify-center px-3.5 py-2.5 text-garden-muted hover:text-garden-danger hover:bg-garden-danger-light transition-colors"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
@@ -327,6 +330,51 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
               <path d="M12 10v8"/>
             </svg>
           </button>
+
+          <div className="w-px bg-garden-hairline-soft" />
+
+          {/* More — send to project / archive */}
+          <div className="relative flex">
+            <button
+              onClick={(e) => { e.stopPropagation(); setMenuOpen((v) => !v) }}
+              title="Mehr"
+              className="flex items-center justify-center px-3.5 py-2.5 text-garden-muted hover:text-garden-ink hover:bg-garden-hairline-soft transition-colors rounded-br-2xl"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/>
+              </svg>
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-30" onClick={(e) => { e.stopPropagation(); setMenuOpen(false) }} />
+                <div className="absolute bottom-full right-0 mb-1 z-40 bg-garden-surface border border-garden-hairline rounded-xl shadow-paper-lg overflow-hidden min-w-52 animate-fade-in">
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onSendToProject?.() }}
+                    className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-ink hover:bg-garden-hairline-soft transition-colors text-left"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+                    </svg>
+                    In ein Projekt
+                  </button>
+                  <div className="h-px bg-garden-hairline" />
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setMenuOpen(false); onArchive?.() }}
+                    className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-ink hover:bg-garden-hairline-soft transition-colors text-left"
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                      strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+                      <rect x="3" y="4" width="18" height="4" rx="1"/>
+                      <path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8"/>
+                      <line x1="10" y1="12" x2="14" y2="12"/>
+                    </svg>
+                    Ins Archiv (Kompost)
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>
