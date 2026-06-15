@@ -3,6 +3,8 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 
+type Workspace = 'garden' | 'lernen' | 'fiction'
+
 const gardenNav = [
   { href: '/dump',     label: 'Dump' },
   { href: '/garden',   label: 'Garden' },
@@ -16,6 +18,28 @@ const lernenNav = [
   { href: '/lernen', label: 'Konzepte' },
 ]
 
+const fictionNav = [
+  { href: '/fiction', label: 'Romane' },
+]
+
+const workspaces: { key: Workspace; label: string; home: string }[] = [
+  { key: 'garden',  label: 'Garden',  home: '/dump' },
+  { key: 'lernen',  label: 'Lernen',  home: '/lernen' },
+  { key: 'fiction', label: 'Fiction', home: '/fiction' },
+]
+
+function workspaceOf(pathname: string): Workspace {
+  if (pathname.startsWith('/fiction')) return 'fiction'
+  if (pathname.startsWith('/lernen')) return 'lernen'
+  return 'garden'
+}
+
+function navFor(ws: Workspace) {
+  if (ws === 'lernen') return lernenNav
+  if (ws === 'fiction') return fictionNav
+  return gardenNav
+}
+
 function isTabActive(href: string, pathname: string): boolean {
   if (href === '/lernen') {
     return pathname === '/lernen'
@@ -26,8 +50,8 @@ function isTabActive(href: string, pathname: string): boolean {
 
 export default function NavBar() {
   const pathname = usePathname()
-  const isLernen = pathname.startsWith('/lernen')
-  const navItems = isLernen ? lernenNav : gardenNav
+  const ws = workspaceOf(pathname)
+  const navItems = navFor(ws)
   const settingsActive = pathname.startsWith('/settings')
 
   return (
@@ -35,22 +59,17 @@ export default function NavBar() {
       <div className="h-px w-full bg-garden-hairline-soft" />
       {/* Workspace switcher row */}
       <div className="flex items-center justify-center gap-1 py-1 border-b border-garden-hairline-soft">
-        <Link
-          href="/dump"
-          className={`px-3 py-0.5 rounded-full font-mono micro-caps transition-colors ${
-            !isLernen ? 'bg-garden-surface text-garden-ink border border-garden-hairline' : 'text-garden-muted-soft'
-          }`}
-        >
-          Garden
-        </Link>
-        <Link
-          href="/lernen"
-          className={`px-3 py-0.5 rounded-full font-mono micro-caps transition-colors ${
-            isLernen ? 'bg-garden-surface text-garden-ink border border-garden-hairline' : 'text-garden-muted-soft'
-          }`}
-        >
-          Lernen
-        </Link>
+        {workspaces.map((w) => (
+          <Link
+            key={w.key}
+            href={w.home}
+            className={`px-3 py-0.5 rounded-full font-mono micro-caps transition-colors ${
+              ws === w.key ? 'bg-garden-surface text-garden-ink border border-garden-hairline' : 'text-garden-muted-soft'
+            }`}
+          >
+            {w.label}
+          </Link>
+        ))}
       </div>
       <div className="flex items-stretch justify-around max-w-lg mx-auto px-3 h-14">
         {navItems.map(({ href, label }) => {

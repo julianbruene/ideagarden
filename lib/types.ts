@@ -2,6 +2,7 @@ export type NodeContentType = 'text' | 'voice' | 'image' | 'quote'
 export type IdeaStatus = 'growing' | 'done'
 export type ProjectStatus = 'active' | 'done'
 export type ProjectKind = 'single' | 'book'
+export type ProjectGenre = 'nonfiction' | 'fiction'
 export type ChatRole = 'sparring' | 'researcher' | 'editor'
 export type InputRole = 'user' | 'assistant'
 export type ContainerType = 'idea' | 'project'
@@ -66,6 +67,9 @@ export interface Project {
   // Chapter-level: what role this chapter plays in the book (not its content)
   chapter_function?: string | null
   kind: ProjectKind
+  // 'fiction' projects live in the Fiction workspace and reuse the
+  // book/chapter machinery; 'nonfiction' is everything else.
+  genre?: ProjectGenre
   parent_project_id: string | null
   chapter_order: number | null
   chat_role?: ChatRole

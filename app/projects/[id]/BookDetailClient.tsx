@@ -391,6 +391,19 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
   const openPointRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
 
+  // Genre-aware framing — same machinery, fiction-tuned labels.
+  const isFiction = book.genre === 'fiction'
+  const kindLabel = isFiction ? 'Roman' : 'Buch'
+  const backHref = isFiction ? '/fiction' : '/projects'
+  const kernLabel = isFiction ? 'Prämisse' : 'Kernthese'
+  const kernPlaceholder = isFiction
+    ? 'Worum geht es — in einem Satz?'
+    : 'Wofür steht dieses Buch — in einem Satz?'
+  const audienceLabel = isFiction ? 'Ton & Genre' : 'Zielleser'
+  const audiencePlaceholder = isFiction
+    ? 'Wie soll es sich anfühlen? Genre, Stimmung.'
+    : 'Wer soll das lesen — in einem Satz?'
+
   // Debounced auto-save for the two header free-text fields
   function useDebouncedSave(value: string, original: string | null, field: keyof Project) {
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -516,6 +529,7 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
           kind: 'single',
           parent_project_id: book.id,
           title: `Kapitel ${chapters.length + 1}`,
+          genre: book.genre ?? 'nonfiction', // chapters inherit the novel's genre
         }),
       })
       const data = await res.json()
@@ -533,14 +547,15 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
   }
 
   async function handleDelete() {
-    if (!window.confirm('Buch löschen? Alle Kapitel werden mit gelöscht. Das kann nicht rückgängig gemacht werden.')) return
+    const what = isFiction ? 'Roman' : 'Buch'
+    if (!window.confirm(`${what} löschen? Alle Kapitel werden mit gelöscht. Das kann nicht rückgängig gemacht werden.`)) return
     const res = await fetch(`/api/projects/${book.id}`, { method: 'DELETE' })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
       alert(`Löschen fehlgeschlagen: ${data.error ?? res.status}`)
       return
     }
-    router.push('/projects')
+    router.push(backHref)
   }
 
   async function handleMarkDone() {
@@ -638,9 +653,9 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
       <header className="sticky top-0 z-30 bg-garden-bg/92 backdrop-blur-md border-b border-garden-hairline pt-safe">
         <div className="max-w-3xl mx-auto px-4 md:px-6 py-3 md:py-4 flex items-center gap-3">
           <Link
-            href="/projects"
+            href={backHref}
             className="p-1.5 -ml-1.5 rounded-lg hover:bg-garden-hairline-soft text-garden-muted hover:text-garden-ink transition-colors"
-            title="Zurück zu Projekten"
+            title={isFiction ? 'Zurück zu Romanen' : 'Zurück zu Projekten'}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
               strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
@@ -650,7 +665,7 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-1.5 mb-0.5">
-              <span className="font-mono micro-caps text-garden-accent">Buch</span>
+              <span className="font-mono micro-caps text-garden-accent">{kindLabel}</span>
               {total > 0 && (
                 <>
                   <span className="text-[10px] text-garden-muted-soft">·</span>
@@ -671,7 +686,7 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
                   if (e.key === 'Escape') { setTitleDraft(book.title ?? ''); setEditingTitle(false) }
                 }}
                 className="w-full bg-transparent font-display text-xl md:text-2xl text-garden-ink outline-none border-b border-garden-accent"
-                placeholder="Buchtitel hinzufügen…"
+                placeholder={isFiction ? 'Romantitel hinzufügen…' : 'Buchtitel hinzufügen…'}
                 autoFocus
                 style={{ fontWeight: 500 }}
               />
@@ -708,7 +723,7 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="20 6 9 17 4 12"/>
                     </svg>
-                    Buch abschließen & exportieren
+                    {kindLabel} abschließen & exportieren
                   </button>
                   <div className="h-px bg-garden-hairline" />
                   <button
@@ -718,7 +733,7 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
                     </svg>
-                    Buch löschen
+                    {kindLabel} löschen
                   </button>
                 </div>
               </>
@@ -731,22 +746,22 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
       <section className="max-w-3xl mx-auto px-4 md:px-6 pt-6 pb-2">
         <div className="space-y-5">
           <div>
-            <label className="font-mono micro-caps text-garden-accent block mb-1">Kernthese</label>
+            <label className="font-mono micro-caps text-garden-accent block mb-1">{kernLabel}</label>
             <textarea
               value={kernideeDraft}
               onChange={(e) => setKernideeDraft(e.target.value)}
-              placeholder="Wofür steht dieses Buch — in einem Satz?"
+              placeholder={kernPlaceholder}
               rows={1}
               className="w-full bg-transparent font-serif text-garden-ink outline-none placeholder:text-garden-muted-soft/70 resize-none leading-relaxed"
               style={{ fontSize: 17, fontStyle: kernideeDraft ? 'normal' : 'italic' }}
             />
           </div>
           <div>
-            <label className="font-mono micro-caps text-garden-muted-soft block mb-1">Zielleser</label>
+            <label className="font-mono micro-caps text-garden-muted-soft block mb-1">{audienceLabel}</label>
             <textarea
               value={zielleserDraft}
               onChange={(e) => setZielleserDraft(e.target.value)}
-              placeholder="Wer soll das lesen — in einem Satz?"
+              placeholder={audiencePlaceholder}
               rows={1}
               className="w-full bg-transparent font-serif text-garden-ink outline-none placeholder:text-garden-muted-soft/70 resize-none leading-relaxed"
               style={{ fontSize: 15, fontStyle: zielleserDraft ? 'normal' : 'italic' }}

@@ -178,9 +178,12 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
     }
   }
 
+  // Fiction chapters live under a novel in the Fiction workspace —
+  // route back there; non-fiction chapters/projects go to /projects.
+  const parentBase = project.genre === 'fiction' ? '/fiction' : '/projects'
   const backHref = isChapter && project.parent_project_id
-    ? `/projects/${project.parent_project_id}`
-    : '/projects'
+    ? `${parentBase}/${project.parent_project_id}`
+    : (project.genre === 'fiction' ? '/fiction' : '/projects')
 
   return (
     <div className="flex flex-col bg-garden-bg" style={{ height: '100dvh', paddingBottom: '56px' }}>
@@ -207,9 +210,9 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
               <>
                 <span className="text-[9px] text-garden-muted-soft flex-shrink-0">·</span>
                 <Link
-                  href={`/projects/${project.parent_project_id}`}
+                  href={`${parentBase}/${project.parent_project_id}`}
                   className="text-[10px] text-garden-muted hover:text-garden-accent transition-colors truncate"
-                  title={`Zum Buch: ${parentBookTitle}`}
+                  title={`${project.genre === 'fiction' ? 'Zum Roman' : 'Zum Buch'}: ${parentBookTitle}`}
                 >
                   {parentBookTitle}
                 </Link>

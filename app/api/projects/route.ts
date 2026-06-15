@@ -29,6 +29,7 @@ export async function POST(req: Request) {
     kernidee,
     kind = 'single',
     parent_project_id = null,
+    genre = 'nonfiction',
   } = body
 
   // For chapters, compute the next chapter_order
@@ -54,6 +55,7 @@ export async function POST(req: Request) {
       kind,
       parent_project_id,
       chapter_order,
+      genre,
     })
     .select()
     .single()

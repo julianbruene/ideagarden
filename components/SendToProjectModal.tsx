@@ -20,8 +20,9 @@ export default function SendToProjectModal({ onPick, onClose }: Props) {
       .then((data) => {
         if (!active) return
         if (data.error) { setError(data.error); setProjects([]); return }
-        // Active top-level projects only (singles + books).
-        const list = (data.projects ?? []).filter((p: Project) => p.status === 'active')
+        // Active top-level non-fiction projects (singles + books).
+        // Fiction novels have their own material flow in the Fiction workspace.
+        const list = (data.projects ?? []).filter((p: Project) => p.status === 'active' && p.genre !== 'fiction')
         setProjects(list)
       })
       .catch((e) => { if (active) { setError(String(e)); setProjects([]) } })

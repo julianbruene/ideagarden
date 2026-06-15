@@ -4,6 +4,8 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
+type Workspace = 'garden' | 'lernen' | 'fiction'
+
 const gardenNav = [
   { href: '/dump',     label: 'Dump',     hint: '⌘1' },
   { href: '/garden',   label: 'Garden',   hint: '⌘2' },
@@ -16,6 +18,28 @@ const lernenNav = [
   { href: '/lernen/leitfragen', label: 'Leitfragen', hint: '⌘1' },
   { href: '/lernen', label: 'Konzepte', hint: '⌘2' },
 ]
+
+const fictionNav = [
+  { href: '/fiction', label: 'Romane', hint: '⌘1' },
+]
+
+const workspaces: { key: Workspace; label: string; home: string }[] = [
+  { key: 'garden',  label: 'Garden',  home: '/dump' },
+  { key: 'lernen',  label: 'Lernen',  home: '/lernen' },
+  { key: 'fiction', label: 'Fiction', home: '/fiction' },
+]
+
+function workspaceOf(pathname: string): Workspace {
+  if (pathname.startsWith('/fiction')) return 'fiction'
+  if (pathname.startsWith('/lernen')) return 'lernen'
+  return 'garden'
+}
+
+function navFor(ws: Workspace) {
+  if (ws === 'lernen') return lernenNav
+  if (ws === 'fiction') return fictionNav
+  return gardenNav
+}
 
 // Active-tab match. Special-cased so /lernen doesn't claim active
 // when we're on /lernen/leitfragen — the nested static route
@@ -31,8 +55,8 @@ function isTabActive(href: string, pathname: string): boolean {
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const isLernen = pathname.startsWith('/lernen')
-  const navItems = isLernen ? lernenNav : gardenNav
+  const ws = workspaceOf(pathname)
+  const navItems = navFor(ws)
 
   async function handleSignOut() {
     const supabase = createClient()
@@ -45,7 +69,7 @@ export default function Sidebar() {
     <aside className="hidden md:flex fixed left-0 top-0 h-screen w-60 flex-col bg-garden-bg border-r border-garden-hairline z-30">
       {/* Brand */}
       <div className="px-6 pt-6 pb-4">
-        <Link href={isLernen ? '/lernen' : '/dump'} className="block">
+        <Link href={workspaces.find((w) => w.key === ws)?.home ?? '/dump'} className="block">
           <span className="flex items-baseline gap-2">
             {/* Mark: italic & + coral dot */}
             <span className="relative inline-block" style={{ width: 28, height: 28 }}>
@@ -69,22 +93,17 @@ export default function Sidebar() {
       {/* Workspace switcher */}
       <div className="px-6 pb-4">
         <div className="flex items-center gap-1 p-0.5 rounded-full border border-garden-hairline bg-garden-surface">
-          <Link
-            href="/dump"
-            className={`flex-1 text-center py-1 rounded-full font-mono micro-caps transition-colors ${
-              !isLernen ? 'bg-garden-bg text-garden-ink' : 'text-garden-muted-soft hover:text-garden-ink'
-            }`}
-          >
-            Garden
-          </Link>
-          <Link
-            href="/lernen"
-            className={`flex-1 text-center py-1 rounded-full font-mono micro-caps transition-colors ${
-              isLernen ? 'bg-garden-bg text-garden-ink' : 'text-garden-muted-soft hover:text-garden-ink'
-            }`}
-          >
-            Lernen
-          </Link>
+          {workspaces.map((w) => (
+            <Link
+              key={w.key}
+              href={w.home}
+              className={`flex-1 text-center py-1 rounded-full font-mono micro-caps transition-colors ${
+                ws === w.key ? 'bg-garden-bg text-garden-ink' : 'text-garden-muted-soft hover:text-garden-ink'
+              }`}
+            >
+              {w.label}
+            </Link>
+          ))}
         </div>
       </div>
 

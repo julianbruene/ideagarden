@@ -14,6 +14,7 @@ export default async function ProjectsPage() {
     .select('*')
     .is('parent_project_id', null)
     .eq('status', 'active')
+    .neq('genre', 'fiction') // fiction novels live in the Fiction workspace
     .order('created_at', { ascending: false })
 
   const list = projects ?? []
