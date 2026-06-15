@@ -6,9 +6,11 @@ import type { IdeaNode } from '@/lib/types'
 
 interface Props {
   onNodeCreated: (node: IdeaNode) => void
+  // Which workspace's Dump this input writes to.
+  genre?: 'nonfiction' | 'fiction'
 }
 
-export default function DumpInput({ onNodeCreated }: Props) {
+export default function DumpInput({ onNodeCreated, genre = 'nonfiction' }: Props) {
   const [text, setText] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const [isDragOver, setIsDragOver] = useState(false)
@@ -45,7 +47,7 @@ export default function DumpInput({ onNodeCreated }: Props) {
     const res = await fetch('/api/nodes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content, content_type: contentType, image_url: imageUrl ?? null }),
+      body: JSON.stringify({ content, content_type: contentType, image_url: imageUrl ?? null, genre }),
     })
     if (!res.ok) return
     const { node } = await res.json()

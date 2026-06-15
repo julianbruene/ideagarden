@@ -59,10 +59,11 @@ function StateDot({ state }: { state: ChapterState }) {
 interface SortableChapterProps {
   chapter: Project
   index: number
+  basePath: string
   onFunctionSaved: (id: string, fn: string | null) => void
 }
 
-function SortableChapter({ chapter, index, onFunctionSaved }: SortableChapterProps) {
+function SortableChapter({ chapter, index, basePath, onFunctionSaved }: SortableChapterProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: chapter.id })
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -121,7 +122,7 @@ function SortableChapter({ chapter, index, onFunctionSaved }: SortableChapterPro
             {String(index + 1).padStart(2, '0')}
           </span>
           <Link
-            href={`/projects/${chapter.id}`}
+            href={`${basePath}/${chapter.id}`}
             className="font-display text-garden-ink hover:text-garden-accent transition-colors truncate"
             style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3 }}
           >
@@ -813,6 +814,7 @@ export default function BookDetailClient({ book: initialBook, initialChapters, i
                     key={chapter.id}
                     chapter={chapter}
                     index={i}
+                    basePath={backHref}
                     onFunctionSaved={handleFunctionSavedLocal}
                   />
                 ))}

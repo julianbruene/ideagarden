@@ -16,6 +16,9 @@ interface Props {
   onHeart?: () => void
   onSendToProject?: () => void
   onArchive?: () => void
+  // 'garden' = full Dump bar (idea sex, promote, archive).
+  // 'fiction' = lean bar: send to a text + edit + delete.
+  variant?: 'garden' | 'fiction'
 }
 
 function formatDate(iso: string) {
@@ -28,7 +31,7 @@ function formatDate(iso: string) {
   return d.toLocaleDateString('de-DE', { month: 'short', day: 'numeric' })
 }
 
-export default function NodeCard({ node, selected, onSelect, onDelete, onPromote, onNodeUpdated, selectionMode, hearted, onHeart, onSendToProject, onArchive }: Props) {
+export default function NodeCard({ node, selected, onSelect, onDelete, onPromote, onNodeUpdated, selectionMode, hearted, onHeart, onSendToProject, onArchive, variant = 'garden' }: Props) {
   const [expanded, setExpanded] = useState(false)
   const [promoting, setPromoting] = useState(false)
   const [transcribing, setTranscribing] = useState(false)
@@ -255,8 +258,55 @@ export default function NodeCard({ node, selected, onSelect, onDelete, onPromote
         )}
       </div>
 
+      {/* Fiction variant — lean bar: In Text / Edit / Trash */}
+      {!selectionMode && variant === 'fiction' && (
+        <div className="flex items-stretch border-t border-garden-hairline-soft">
+          <button
+            onClick={(e) => { e.stopPropagation(); onSendToProject?.() }}
+            title="In einen Text schicken"
+            className="flex-1 flex items-center justify-center gap-1.5 py-2.5 text-garden-accent-deep hover:bg-garden-accent-soft transition-colors"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/>
+            </svg>
+            <span className="font-mono micro-caps">In Text</span>
+          </button>
+
+          <div className="w-px bg-garden-hairline-soft" />
+
+          <button
+            onClick={(e) => { e.stopPropagation(); startEdit('content') }}
+            title="Überarbeiten"
+            className="flex items-center justify-center px-3.5 py-2.5 text-garden-muted hover:text-garden-ink hover:bg-garden-hairline-soft transition-colors"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 20h9"/>
+              <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/>
+            </svg>
+          </button>
+
+          <div className="w-px bg-garden-hairline-soft" />
+
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete?.() }}
+            title="Löschen"
+            className="flex items-center justify-center px-3.5 py-2.5 text-garden-muted hover:text-garden-danger hover:bg-garden-danger-light transition-colors rounded-br-2xl"
+          >
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 6h18"/>
+              <path d="M8 6V4a1 1 0 011-1h6a1 1 0 011 1v2"/>
+              <path d="M5 6l1 14a2 2 0 002 2h8a2 2 0 002-2l1-14"/>
+              <path d="M12 10v8"/>
+            </svg>
+          </button>
+        </div>
+      )}
+
       {/* Persistent action bar — 4 segments: Sex / In Garden / Edit / Trash */}
-      {!selectionMode && (
+      {!selectionMode && variant === 'garden' && (
         <div className="flex items-stretch border-t border-garden-hairline-soft">
           {/* Heart — for Idea Sex preselect */}
           <button

@@ -19,7 +19,8 @@ const lernenNav = [
 ]
 
 const fictionNav = [
-  { href: '/fiction', label: 'Romane' },
+  { href: '/fiction/dump', label: 'Dump' },
+  { href: '/fiction',      label: 'Texte' },
 ]
 
 const workspaces: { key: Workspace; label: string; home: string }[] = [
@@ -44,6 +45,10 @@ function isTabActive(href: string, pathname: string): boolean {
   if (href === '/lernen') {
     return pathname === '/lernen'
       || (pathname.startsWith('/lernen/') && !pathname.startsWith('/lernen/leitfragen'))
+  }
+  if (href === '/fiction') {
+    return pathname === '/fiction'
+      || (pathname.startsWith('/fiction/') && !pathname.startsWith('/fiction/dump'))
   }
   return pathname.startsWith(href)
 }

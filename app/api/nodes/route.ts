@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await req.json()
-  const { content, content_type = 'text', image_url = null } = body
+  const { content, content_type = 'text', image_url = null, genre = 'nonfiction' } = body
 
   if (!content && !image_url) {
     return NextResponse.json({ error: 'content or image_url required' }, { status: 400 })
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
 
   const { data, error } = await supabase
     .from('nodes')
-    .insert({ user_id: user.id, content, content_type, image_url })
+    .insert({ user_id: user.id, content, content_type, image_url, genre })
     .select()
     .single()
 

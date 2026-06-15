@@ -20,7 +20,8 @@ const lernenNav = [
 ]
 
 const fictionNav = [
-  { href: '/fiction', label: 'Romane', hint: '⌘1' },
+  { href: '/fiction/dump', label: 'Dump',  hint: '⌘1' },
+  { href: '/fiction',      label: 'Texte', hint: '⌘2' },
 ]
 
 const workspaces: { key: Workspace; label: string; home: string }[] = [
@@ -48,6 +49,12 @@ function isTabActive(href: string, pathname: string): boolean {
   if (href === '/lernen') {
     return pathname === '/lernen'
       || (pathname.startsWith('/lernen/') && !pathname.startsWith('/lernen/leitfragen'))
+  }
+  // /fiction is the Texte list — must not light up on /fiction/dump,
+  // but should on a novel/text detail (/fiction/<id>).
+  if (href === '/fiction') {
+    return pathname === '/fiction'
+      || (pathname.startsWith('/fiction/') && !pathname.startsWith('/fiction/dump'))
   }
   return pathname.startsWith(href)
 }

@@ -6,9 +6,11 @@ import type { Project } from '@/lib/types'
 interface Props {
   onPick: (projectId: string) => void
   onClose: () => void
+  // Restrict the picker to one workspace's projects. Default: non-fiction.
+  genre?: 'nonfiction' | 'fiction'
 }
 
-export default function SendToProjectModal({ onPick, onClose }: Props) {
+export default function SendToProjectModal({ onPick, onClose, genre = 'nonfiction' }: Props) {
   const [projects, setProjects] = useState<Project[] | null>(null)
   const [query, setQuery] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -20,14 +22,16 @@ export default function SendToProjectModal({ onPick, onClose }: Props) {
       .then((data) => {
         if (!active) return
         if (data.error) { setError(data.error); setProjects([]); return }
-        // Active top-level non-fiction projects (singles + books).
-        // Fiction novels have their own material flow in the Fiction workspace.
-        const list = (data.projects ?? []).filter((p: Project) => p.status === 'active' && p.genre !== 'fiction')
+        // Active top-level projects for the requested workspace.
+        const wantFiction = genre === 'fiction'
+        const list = (data.projects ?? []).filter((p: Project) =>
+          p.status === 'active' && (p.genre === 'fiction') === wantFiction
+        )
         setProjects(list)
       })
       .catch((e) => { if (active) { setError(String(e)); setProjects([]) } })
     return () => { active = false }
-  }, [])
+  }, [genre])
 
   const filtered = useMemo(() => {
     if (!projects) return []
@@ -43,7 +47,9 @@ export default function SendToProjectModal({ onPick, onClose }: Props) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 py-4 border-b border-garden-hairline">
-          <h3 className="font-display text-garden-ink mb-2" style={{ fontSize: 17, fontWeight: 500 }}>In welches Projekt?</h3>
+          <h3 className="font-display text-garden-ink mb-2" style={{ fontSize: 17, fontWeight: 500 }}>
+            {genre === 'fiction' ? 'In welchen Text?' : 'In welches Projekt?'}
+          </h3>
           <input
             type="text"
             autoFocus
@@ -72,6 +78,13 @@ export default function SendToProjectModal({ onPick, onClose }: Props) {
           ) : (
             filtered.map((p) => {
               const isBook = p.kind === 'book'
+              const isFiction = genre === 'fiction'
+              const fallbackTitle = isBook
+                ? (isFiction ? 'Unbenannter Roman' : 'Unbenanntes Buch')
+                : (isFiction ? 'Unbenannte Kurzgeschichte' : 'Unbenanntes Projekt')
+              const badge = isBook
+                ? (isFiction ? 'Roman · Book Dump' : 'Buch · Book Dump')
+                : (isFiction ? 'Kurzgeschichte' : 'Projekt')
               return (
                 <button
                   key={p.id}
@@ -79,10 +92,10 @@ export default function SendToProjectModal({ onPick, onClose }: Props) {
                   className="w-full text-left px-5 py-2.5 hover:bg-garden-hairline-soft/40 transition-colors flex items-center gap-2"
                 >
                   <span className="flex-1 min-w-0 font-display text-garden-ink truncate" style={{ fontSize: 15, fontWeight: 500 }}>
-                    {p.title || (isBook ? 'Unbenanntes Buch' : 'Unbenanntes Projekt')}
+                    {p.title || fallbackTitle}
                   </span>
                   <span className="flex-shrink-0 font-mono micro-caps text-garden-muted-soft">
-                    {isBook ? 'Buch · Book Dump' : 'Projekt'}
+                    {badge}
                   </span>
                 </button>
               )

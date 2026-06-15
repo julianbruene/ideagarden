@@ -8,28 +8,29 @@ import Sidebar from '@/components/Sidebar'
 import type { Project } from '@/lib/types'
 
 interface Props {
-  initialNovels: Project[]
+  initialTexts: Project[]
   chapterCount: Record<string, number>
   chapterDone: Record<string, number>
 }
 
-export default function FictionClient({ initialNovels, chapterCount, chapterDone }: Props) {
-  const [novels] = useState<Project[]>(initialNovels)
+export default function FictionClient({ initialTexts, chapterCount, chapterDone }: Props) {
+  const [texts] = useState<Project[]>(initialTexts)
+  const [choosing, setChoosing] = useState(false)
   const [creating, setCreating] = useState(false)
   const router = useRouter()
 
-  async function createNovel() {
+  async function create(kind: 'single' | 'book') {
     if (creating) return
     setCreating(true)
     try {
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ kind: 'book', genre: 'fiction' }),
+        body: JSON.stringify({ kind, genre: 'fiction' }),
       })
       const data = await res.json()
       if (!res.ok || !data.project?.id) {
-        alert(`Roman anlegen fehlgeschlagen: ${data?.error ?? res.status}`)
+        alert(`Anlegen fehlgeschlagen: ${data?.error ?? res.status}`)
         return
       }
       router.push(`/fiction/${data.project.id}`)
@@ -43,10 +44,10 @@ export default function FictionClient({ initialNovels, chapterCount, chapterDone
       <header className="px-6 md:px-12 page-header-pt pb-6 md:pb-8 border-b border-garden-hairline">
         <div className="max-w-2xl md:max-w-3xl mx-auto md:mx-0">
           <div className="flex items-center gap-3 mb-3">
-            <span className="font-mono micro-caps text-garden-muted-soft">F01 · Romane</span>
+            <span className="font-mono micro-caps text-garden-muted-soft">F01 · Texte</span>
             <span className="h-px flex-1 bg-garden-hairline" />
             <button
-              onClick={createNovel}
+              onClick={() => setChoosing(true)}
               disabled={creating}
               className="font-mono micro-caps text-garden-accent flex items-center gap-1.5 hover:text-garden-accent-deep transition-colors disabled:opacity-40"
             >
@@ -54,7 +55,7 @@ export default function FictionClient({ initialNovels, chapterCount, chapterDone
                 strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
-              {creating ? '…' : 'Neuer Roman'}
+              {creating ? '…' : 'Neuer Text'}
             </button>
           </div>
           <h1
@@ -64,36 +65,37 @@ export default function FictionClient({ initialNovels, chapterCount, chapterDone
             Was willst du <em className="text-garden-accent" style={{ fontWeight: 500, fontStyle: 'italic' }}>erzählen?</em>
           </h1>
           <p className="font-display italic text-garden-muted mt-3 text-[15px] leading-relaxed">
-            Figuren, Szenen, Kapitel — ein Roman wächst Stück für Stück.
+            Kurzgeschichten und Romane — Figuren, Szenen, Kapitel, Stück für Stück.
           </p>
         </div>
       </header>
 
       <main className="max-w-2xl mx-auto px-6 md:px-12 pt-6 md:pt-10">
-        {novels.length === 0 ? (
+        {texts.length === 0 ? (
           <div className="text-center py-16">
             <p className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</p>
-            <p className="font-display italic text-garden-muted">Noch kein Roman.</p>
+            <p className="font-display italic text-garden-muted">Noch kein Text.</p>
             <p className="font-mono text-[11px] text-garden-muted-soft mt-2">
-              Eine Prämisse, ein paar Figuren — der Rest kommt beim Schreiben.
+              Eine Kurzgeschichte oder ein Roman — fang an.
             </p>
             <button
-              onClick={createNovel}
+              onClick={() => setChoosing(true)}
               disabled={creating}
               className="mt-6 font-mono micro-caps text-garden-accent hover:text-garden-accent-deep transition-colors"
             >
-              {creating ? '…' : 'Ersten Roman anlegen →'}
+              {creating ? '…' : 'Ersten Text anlegen →'}
             </button>
           </div>
         ) : (
           <div className="pb-24 md:pb-12">
-            {novels.map((n, i) => {
-              const total = chapterCount[n.id] ?? 0
-              const done = chapterDone[n.id] ?? 0
+            {texts.map((t, i) => {
+              const isBook = t.kind === 'book'
+              const total = chapterCount[t.id] ?? 0
+              const done = chapterDone[t.id] ?? 0
               return (
                 <Link
-                  key={n.id}
-                  href={`/fiction/${n.id}`}
+                  key={t.id}
+                  href={`/fiction/${t.id}`}
                   className="group relative block py-5 animate-fade-in transition-colors hover:bg-garden-hairline-soft/40 -mx-3 px-3 rounded"
                   style={{ borderTop: i === 0 ? 'none' : '1px solid #E8E3D8' }}
                 >
@@ -102,15 +104,17 @@ export default function FictionClient({ initialNovels, chapterCount, chapterDone
                       className="flex-1 font-display display-tight balance text-garden-ink"
                       style={{ fontSize: 19, lineHeight: 1.25, fontWeight: 500 }}
                     >
-                      {n.title || 'Unbenannter Roman'}
+                      {t.title || (isBook ? 'Unbenannter Roman' : 'Unbenannte Kurzgeschichte')}
                     </h3>
                     <span className="font-mono micro-caps text-garden-muted-soft flex-shrink-0 tabnums">
-                      {total === 0 ? 'keine Kapitel' : `${done}/${total} Kapitel`}
+                      {isBook
+                        ? (total === 0 ? 'Roman' : `Roman · ${done}/${total} Kap.`)
+                        : 'Kurzgeschichte'}
                     </span>
                   </div>
-                  {n.kernidee && (
+                  {t.kernidee && (
                     <p className="font-display italic text-[14px] text-garden-muted leading-relaxed line-clamp-2">
-                      {n.kernidee}
+                      {t.kernidee}
                     </p>
                   )}
                 </Link>
@@ -122,6 +126,47 @@ export default function FictionClient({ initialNovels, chapterCount, chapterDone
 
       <Sidebar />
       <NavBar />
+
+      {/* Choose kind */}
+      {choosing && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-end md:items-center justify-center p-0 md:p-6 animate-fade-in" onClick={() => setChoosing(false)}>
+          <div
+            className="w-full md:max-w-md bg-garden-surface rounded-t-2xl md:rounded-2xl border border-garden-hairline shadow-paper-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-4 border-b border-garden-hairline">
+              <h3 className="font-display text-garden-ink" style={{ fontSize: 17, fontWeight: 500 }}>Neuer Text</h3>
+              <button onClick={() => setChoosing(false)} className="p-1.5 rounded-lg text-garden-muted hover:text-garden-ink transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 space-y-2.5">
+              <button
+                onClick={() => create('single')}
+                disabled={creating}
+                className="w-full text-left p-4 rounded-xl border border-garden-hairline hover:border-garden-accent/40 hover:bg-garden-accent-soft/30 transition-all disabled:opacity-50"
+              >
+                <h4 className="font-display text-garden-ink mb-1" style={{ fontSize: 15, fontWeight: 500 }}>Kurzgeschichte</h4>
+                <p className="text-[13px] text-garden-muted leading-relaxed">
+                  Ein einzelner Text mit eigenem Schreibeditor. Kein Kapitel-Überbau.
+                </p>
+              </button>
+              <button
+                onClick={() => create('book')}
+                disabled={creating}
+                className="w-full text-left p-4 rounded-xl border border-garden-hairline hover:border-garden-accent/40 hover:bg-garden-accent-soft/30 transition-all disabled:opacity-50"
+              >
+                <h4 className="font-display text-garden-ink mb-1" style={{ fontSize: 15, fontWeight: 500 }}>Roman</h4>
+                <p className="text-[13px] text-garden-muted leading-relaxed">
+                  Mehrere Kapitel, Prämisse, Book Dump. Geschrieben wird in den Kapiteln.
+                </p>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

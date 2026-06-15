@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic'
 export default async function FictionPage() {
   const supabase = await createClient()
 
-  const { data: novels } = await supabase
+  const { data: texts } = await supabase
     .from('projects')
     .select('*')
     .is('parent_project_id', null)
@@ -14,17 +14,17 @@ export default async function FictionPage() {
     .eq('status', 'active')
     .order('created_at', { ascending: false })
 
-  const list = novels ?? []
-  const ids = list.map((n) => n.id)
+  const list = texts ?? []
+  const bookIds = list.filter((t) => t.kind === 'book').map((t) => t.id)
 
   // Chapter counts per novel (done vs total) for a subtle progress hint
   const chapterCount: Record<string, number> = {}
   const chapterDone: Record<string, number> = {}
-  if (ids.length > 0) {
+  if (bookIds.length > 0) {
     const { data: chapters } = await supabase
       .from('projects')
       .select('parent_project_id, status')
-      .in('parent_project_id', ids)
+      .in('parent_project_id', bookIds)
     for (const row of chapters ?? []) {
       if (!row.parent_project_id) continue
       chapterCount[row.parent_project_id] = (chapterCount[row.parent_project_id] ?? 0) + 1
@@ -34,5 +34,5 @@ export default async function FictionPage() {
     }
   }
 
-  return <FictionClient initialNovels={list} chapterCount={chapterCount} chapterDone={chapterDone} />
+  return <FictionClient initialTexts={list} chapterCount={chapterCount} chapterDone={chapterDone} />
 }

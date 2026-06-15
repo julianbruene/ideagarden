@@ -15,6 +15,8 @@ export interface IdeaNode {
   image_url: string | null
   image_transcript?: string | null
   promoted: boolean
+  // Which workspace's Dump this node belongs to.
+  genre?: ProjectGenre
   created_at: string
 }
 
