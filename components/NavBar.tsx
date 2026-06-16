@@ -16,6 +16,7 @@ const gardenNav = [
 const lernenNav = [
   { href: '/lernen/leitfragen', label: 'Leitfragen' },
   { href: '/lernen', label: 'Konzepte' },
+  { href: '/lernen/quellen', label: 'Quellen' },
 ]
 
 const fictionNav = [
@@ -44,7 +45,9 @@ function navFor(ws: Workspace) {
 function isTabActive(href: string, pathname: string): boolean {
   if (href === '/lernen') {
     return pathname === '/lernen'
-      || (pathname.startsWith('/lernen/') && !pathname.startsWith('/lernen/leitfragen'))
+      || (pathname.startsWith('/lernen/')
+          && !pathname.startsWith('/lernen/leitfragen')
+          && !pathname.startsWith('/lernen/quellen'))
   }
   if (href === '/fiction') {
     return pathname === '/fiction'

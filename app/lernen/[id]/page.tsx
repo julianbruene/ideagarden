@@ -80,6 +80,16 @@ export default async function ConceptPage({ params }: Props) {
     .order('updated_at', { ascending: false })
   const allGoals = (allGoalsRaw ?? []) as { id: string; title: string | null; description: string | null }[]
 
+  // Sources — the linked one (if any) + all for the picker
+  const { data: allSourcesRaw } = await supabase
+    .from('sources')
+    .select('id, title, author, type')
+    .order('updated_at', { ascending: false })
+  const allSources = (allSourcesRaw ?? []) as { id: string; title: string | null; author: string | null; type: string }[]
+  const linkedSource = concept.source_id
+    ? allSources.find((s) => s.id === concept.source_id) ?? null
+    : null
+
   return (
     <ConceptClient
       initialConcept={concept}
@@ -87,6 +97,8 @@ export default async function ConceptPage({ params }: Props) {
       allOthers={(allOthers ?? []) as LinkedConcept[]}
       initialLinkedGoals={linkedGoals}
       allGoals={allGoals}
+      allSources={allSources}
+      initialLinkedSource={linkedSource}
     />
   )
 }

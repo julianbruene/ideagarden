@@ -26,12 +26,21 @@ export interface LinkedGoal extends GoalSummary {
   reflection: string | null
 }
 
+export interface SourceLite {
+  id: string
+  title: string | null
+  author: string | null
+  type: string
+}
+
 interface Props {
   initialConcept: Concept
   initialLinked: LinkedConcept[]
   allOthers: LinkedConcept[]
   initialLinkedGoals: LinkedGoal[]
   allGoals: GoalSummary[]
+  allSources: SourceLite[]
+  initialLinkedSource: SourceLite | null
 }
 
 // Auto-resizing textarea — grows with content, no scrollbars
@@ -46,7 +55,7 @@ function useAutoSize(ref: React.RefObject<HTMLTextAreaElement | null>, value: st
 
 type SaveState = 'saved' | 'dirty' | 'saving'
 
-export default function ConceptClient({ initialConcept, initialLinked, allOthers, initialLinkedGoals, allGoals }: Props) {
+export default function ConceptClient({ initialConcept, initialLinked, allOthers, initialLinkedGoals, allGoals, allSources, initialLinkedSource }: Props) {
   const [concept, setConcept] = useState<Concept>(initialConcept)
   const [linked, setLinked] = useState<LinkedConcept[]>(initialLinked)
   const [linkedGoals, setLinkedGoals] = useState<LinkedGoal[]>(initialLinkedGoals)
@@ -62,7 +71,12 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
   const [summary, setSummary] = useState(concept.summary ?? '')
   const [ownExample, setOwnExample] = useState(concept.own_example ?? '')
   const [body, setBody] = useState(concept.body ?? '')
-  const [source, setSource] = useState(concept.source ?? '')
+  // Legacy free-text origin — read-only now; superseded by linkedSource.
+  const source = concept.source ?? ''
+  // Structured source link
+  const [linkedSource, setLinkedSource] = useState<SourceLite | null>(initialLinkedSource)
+  const [pickingSource, setPickingSource] = useState(false)
+  const [sourcePickerQuery, setSourcePickerQuery] = useState('')
   const [picking, setPicking] = useState(false)
   const [pickerQuery, setPickerQuery] = useState('')
   // Picker flow: select target first, then write the connection note
@@ -76,13 +90,11 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
   const summaryRef = useRef<HTMLTextAreaElement>(null)
   const exampleRef = useRef<HTMLTextAreaElement>(null)
   const bodyRef = useRef<HTMLTextAreaElement>(null)
-  const sourceRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
 
   useAutoSize(summaryRef, summary)
   useAutoSize(exampleRef, ownExample)
   useAutoSize(bodyRef, body)
-  useAutoSize(sourceRef, source)
 
   // ── Save mechanism ────────────────────────────────────────────
   // Goal: never lose a keystroke, even when navigating away mid-typing.
@@ -311,6 +323,42 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
       })
   }, [allOthers, linkedIds, pickerQuery])
 
+  // ── Source link actions ───────────────────────────────────────
+  const sourcePickerFiltered = useMemo(() => {
+    const q = sourcePickerQuery.trim().toLowerCase()
+    if (!q) return allSources
+    return allSources.filter((s) =>
+      (s.title ?? '').toLowerCase().includes(q) || (s.author ?? '').toLowerCase().includes(q)
+    )
+  }, [allSources, sourcePickerQuery])
+
+  async function setConceptSource(s: SourceLite | null) {
+    setLinkedSource(s)
+    setPickingSource(false)
+    setSourcePickerQuery('')
+    await fetch(`/api/concepts/${concept.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ source_id: s?.id ?? null }),
+    })
+  }
+
+  async function createAndLinkSource(title: string) {
+    const trimmed = title.trim()
+    if (!trimmed) return
+    const res = await fetch('/api/sources', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: trimmed, type: 'book', status: 'reading' }),
+    })
+    const data = await res.json()
+    if (!res.ok || !data.source?.id) {
+      alert(`Quelle anlegen fehlgeschlagen: ${data?.error ?? res.status}`)
+      return
+    }
+    await setConceptSource({ id: data.source.id, title: trimmed, author: null, type: 'book' })
+  }
+
   // ── Goal pairing actions ──────────────────────────────────────
   const linkedGoalIds = useMemo(() => new Set(linkedGoals.map((g) => g.id)), [linkedGoals])
   const goalPickerOptions = useMemo(
@@ -505,15 +553,54 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
           </Section>
 
           <Section label="Quelle">
-            <textarea
-              ref={sourceRef}
-              value={source}
-              onChange={(e) => setSource(e.target.value)}
-              onBlur={saveNow}
-              placeholder="Buchtitel, Artikel, Podcast, Gespräch…"
-              rows={1}
-              className="w-full bg-transparent resize-none outline-none text-garden-ink placeholder:text-garden-muted-soft/70 font-mono text-[13px] leading-relaxed"
-            />
+            {linkedSource ? (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Link
+                  href={`/lernen/quellen/${linkedSource.id}`}
+                  className="font-display text-garden-ink hover:text-garden-accent transition-colors"
+                  style={{ fontSize: 15, fontWeight: 500 }}
+                >
+                  {linkedSource.title || 'Unbenannte Quelle'}
+                </Link>
+                <button
+                  onClick={() => setPickingSource(true)}
+                  className="font-mono micro-caps text-garden-muted-soft hover:text-garden-ink transition-colors"
+                >
+                  ändern
+                </button>
+                <button
+                  onClick={() => setConceptSource(null)}
+                  className="font-mono micro-caps text-garden-muted-soft hover:text-garden-accent transition-colors"
+                >
+                  entfernen
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3 flex-wrap">
+                <button
+                  onClick={() => setPickingSource(true)}
+                  className="font-mono micro-caps text-garden-accent hover:text-garden-accent-deep transition-colors flex items-center gap-1.5"
+                >
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                  </svg>
+                  Quelle wählen
+                </button>
+                {/* Legacy free-text origin — offer to convert into a real Source */}
+                {source.trim() && (
+                  <span className="font-mono text-[11px] text-garden-muted-soft">
+                    notiert: „{source.trim()}"
+                    <button
+                      onClick={() => createAndLinkSource(source)}
+                      className="ml-2 text-garden-accent hover:text-garden-accent-deep transition-colors"
+                    >
+                      als Quelle anlegen
+                    </button>
+                  </span>
+                )}
+              </div>
+            )}
           </Section>
         </div>
 
@@ -896,6 +983,55 @@ export default function ConceptClient({ initialConcept, initialLinked, allOthers
                   </div>
                 </div>
               </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Source picker */}
+      {pickingSource && (
+        <div className="fixed inset-0 z-50 bg-black/30 flex items-start justify-center pt-20 p-4 animate-fade-in" onClick={() => { setPickingSource(false); setSourcePickerQuery('') }}>
+          <div
+            className="w-full max-w-md bg-garden-surface rounded-2xl border border-garden-hairline shadow-paper-lg overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-5 py-4 border-b border-garden-hairline">
+              <h3 className="font-display text-garden-ink mb-2" style={{ fontSize: 17, fontWeight: 500 }}>Aus welcher Quelle?</h3>
+              <input
+                type="text"
+                autoFocus
+                value={sourcePickerQuery}
+                onChange={(e) => setSourcePickerQuery(e.target.value)}
+                placeholder="Suchen oder neuen Titel eingeben…"
+                className="w-full bg-garden-bg border border-garden-hairline rounded-lg px-3 py-1.5 text-[14px] text-garden-ink outline-none focus:border-garden-accent/40"
+              />
+            </div>
+            <div className="max-h-72 overflow-y-auto py-1">
+              {sourcePickerFiltered.map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setConceptSource(s)}
+                  className="w-full text-left px-5 py-2.5 hover:bg-garden-hairline-soft/40 transition-colors"
+                >
+                  <p className="font-display text-garden-ink truncate" style={{ fontSize: 15, fontWeight: 500 }}>
+                    {s.title || 'Unbenannte Quelle'}
+                  </p>
+                  {s.author && <p className="font-display italic text-garden-muted text-[13px] truncate">{s.author}</p>}
+                </button>
+              ))}
+              {sourcePickerFiltered.length === 0 && (
+                <p className="px-5 py-4 font-display italic text-garden-muted text-center">Keine passende Quelle.</p>
+              )}
+            </div>
+            {sourcePickerQuery.trim() && (
+              <div className="px-5 py-3 border-t border-garden-hairline">
+                <button
+                  onClick={() => createAndLinkSource(sourcePickerQuery)}
+                  className="font-mono micro-caps text-garden-accent hover:text-garden-accent-deep transition-colors"
+                >
+                  + Neue Quelle: „{sourcePickerQuery.trim()}"
+                </button>
+              </div>
             )}
           </div>
         </div>

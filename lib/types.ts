@@ -94,9 +94,35 @@ export interface Concept {
   summary: string | null      // one sentence in own words
   own_example: string | null  // the concrete example that makes it stick
   body: string | null         // formal/scientific background
-  source: string | null       // where you encountered it
+  source: string | null       // legacy free-text origin (superseded by source_id)
+  source_id?: string | null   // structured link to a Source entity
   created_at: string
   updated_at: string
+}
+
+export type SourceType = 'book' | 'article' | 'podcast' | 'course' | 'conversation' | 'other'
+export type SourceStatus = 'want' | 'reading' | 'done'
+
+// A thing you learn from — book, article, podcast, …
+export interface Source {
+  id: string
+  user_id: string
+  type: SourceType
+  title: string | null
+  author: string | null
+  status: SourceStatus
+  created_at: string
+  updated_at: string
+}
+
+// A raw reading note (literature note) bound to one source.
+export interface SourceNote {
+  id: string
+  source_id: string
+  user_id: string
+  content: string
+  location: string | null
+  created_at: string
 }
 
 // Undirected (stored as a single directed row, queried both ways).

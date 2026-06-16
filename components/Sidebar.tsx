@@ -17,6 +17,7 @@ const gardenNav = [
 const lernenNav = [
   { href: '/lernen/leitfragen', label: 'Leitfragen', hint: '⌘1' },
   { href: '/lernen', label: 'Konzepte', hint: '⌘2' },
+  { href: '/lernen/quellen', label: 'Quellen', hint: '⌘3' },
 ]
 
 const fictionNav = [
@@ -48,7 +49,9 @@ function navFor(ws: Workspace) {
 function isTabActive(href: string, pathname: string): boolean {
   if (href === '/lernen') {
     return pathname === '/lernen'
-      || (pathname.startsWith('/lernen/') && !pathname.startsWith('/lernen/leitfragen'))
+      || (pathname.startsWith('/lernen/')
+          && !pathname.startsWith('/lernen/leitfragen')
+          && !pathname.startsWith('/lernen/quellen'))
   }
   // /fiction is the Texte list — must not light up on /fiction/dump,
   // but should on a novel/text detail (/fiction/<id>).
