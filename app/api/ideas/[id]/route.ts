@@ -35,7 +35,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const body = await req.json()
   // Only allow these fields to be patched
-  const allowed = ['title', 'synthesis', 'status', 'completed_at']
+  const allowed = ['title', 'synthesis', 'platform', 'status', 'completed_at']
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
     if (key in body) updates[key] = body[key]

@@ -24,7 +24,8 @@ export interface Idea {
   id: string
   user_id: string
   title: string | null
-  synthesis: string | null
+  synthesis: string | null   // repurposed as the post body (your rewrite)
+  platform: string | null    // optional target platform for the char counter
   status: IdeaStatus
   source_node_ids: string[]
   created_at: string

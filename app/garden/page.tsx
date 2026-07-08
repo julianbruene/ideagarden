@@ -45,17 +45,17 @@ export default async function GardenPage() {
               strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
               <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
             </svg>
-            Neue Idee
+            Aus dem Dump
           </Link>
         </div>
         <h1
           className="font-display display-tight balance text-garden-ink"
           style={{ fontSize: 'clamp(32px, 5vw, 56px)', lineHeight: 1.05, fontWeight: 400 }}
         >
-          Was bei dir gerade <em className="text-garden-accent" style={{ fontWeight: 500, fontStyle: 'italic' }}>wächst.</em>
+          Roh zu <em className="text-garden-accent" style={{ fontWeight: 500, fontStyle: 'italic' }}>fertig.</em>
         </h1>
         <p className="mt-4 text-[13px] text-garden-muted">
-          <span className="tabnums text-garden-ink">{list.length}</span> {list.length === 1 ? 'Idee' : 'Ideen'} · ungeordnet
+          <span className="tabnums text-garden-ink">{list.length}</span> {list.length === 1 ? 'Entwurf' : 'Entwürfe'} · in Arbeit
         </p>
       </header>
 
@@ -63,9 +63,9 @@ export default async function GardenPage() {
         {list.length === 0 ? (
           <div className="text-center py-20">
             <p className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</p>
-            <p className="font-display italic text-garden-muted">Dein Garden ist leer.</p>
+            <p className="font-display italic text-garden-muted">Noch keine Entwürfe.</p>
             <p className="font-mono text-[11px] text-garden-muted-soft mt-2 mb-6">
-              Schick eine Note aus dem Dump hierher.
+              Schick eine Note aus dem Dump her und schreib sie in deinen Worten um.
             </p>
             <Link href="/dump" className="font-mono micro-caps text-garden-accent">
               → Zum Dump

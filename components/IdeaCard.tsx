@@ -20,7 +20,7 @@ export default function IdeaCard({ idea, index = 0, inputCount = 0 }: Props) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
 
-  const title = idea.title || 'Unbenannte Idee'
+  const title = idea.title || 'Unbenannter Post'
 
   async function handleDelete(e: React.MouseEvent) {
     e.preventDefault()
@@ -45,22 +45,6 @@ export default function IdeaCard({ idea, index = 0, inputCount = 0 }: Props) {
     e.preventDefault()
     setLoading(true)
     try {
-      const mdRes = await fetch(`/api/export/${idea.id}`)
-      if (!mdRes.ok) {
-        const data = await mdRes.json().catch(() => ({}))
-        alert(`Export fehlgeschlagen: ${data.error ?? mdRes.status}`)
-        setLoading(false)
-        return
-      }
-      const { markdown } = await mdRes.json()
-      const blob = new Blob([markdown], { type: 'text/markdown' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${(idea.title ?? 'idea').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
-      a.click()
-      URL.revokeObjectURL(url)
-
       const patchRes = await fetch(`/api/ideas/${idea.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -114,7 +98,7 @@ export default function IdeaCard({ idea, index = 0, inputCount = 0 }: Props) {
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12"/>
               </svg>
-              Als fertig markieren
+              Fertig — ins Kompost
             </button>
             <div className="h-px bg-garden-hairline" />
             <button
@@ -145,16 +129,21 @@ export default function IdeaCard({ idea, index = 0, inputCount = 0 }: Props) {
         </div>
 
         <h3
-          className="font-display display-tight balance pretty mb-5 text-garden-ink"
+          className="font-display display-tight balance pretty mb-3 text-garden-ink"
           style={{ fontSize: 21, lineHeight: 1.2, fontWeight: 400 }}
         >
           {title}
         </h3>
 
+        {/* post preview */}
+        <p className="text-[13.5px] text-garden-muted leading-relaxed line-clamp-3 mb-5 min-h-[1.5em]">
+          {idea.synthesis?.trim() || <span className="italic text-garden-muted-soft">Noch nichts geschrieben.</span>}
+        </p>
+
         {/* footer */}
         <div className="flex items-center justify-between pt-3 border-t border-garden-hairline">
           <span className="font-mono micro-caps text-garden-muted-soft">
-            <span className="tabnums">{inputCount}</span> Notes
+            <span className="tabnums">{inputCount}</span> Quelle{inputCount === 1 ? '' : 'n'}
           </span>
           <span className="font-mono micro-caps flex items-center gap-1 transition-opacity opacity-0 group-hover:opacity-100 text-garden-accent">
             Öffnen

@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import NavBar from '@/components/NavBar'
-import IdeaNotes from '@/components/IdeaNotes'
-import IdeaChat from '@/components/IdeaChat'
 import type { Idea, Input } from '@/lib/types'
 
 interface Props {
@@ -13,19 +12,90 @@ interface Props {
   initialInputs: Input[]
 }
 
-type ActiveTab = 'notes' | 'chat'
+type SaveState = 'saved' | 'dirty' | 'saving'
+
+// Optional platform targets for the character counter.
+const PLATFORMS: { value: string; label: string; limit: number | null }[] = [
+  { value: '', label: 'Kein Ziel', limit: null },
+  { value: 'x', label: 'X', limit: 280 },
+  { value: 'threads', label: 'Threads', limit: 500 },
+  { value: 'bluesky', label: 'Bluesky', limit: 300 },
+  { value: 'instagram', label: 'Instagram', limit: 2200 },
+  { value: 'linkedin', label: 'LinkedIn', limit: 3000 },
+]
+
+function isImageNote(content: string) { return content.startsWith('[img]') }
+function imageUrl(content: string) { return content.slice(5) }
 
 export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: Props) {
   const [idea, setIdea] = useState<Idea>(initialIdea)
-  const [inputs, setInputs] = useState<Input[]>(initialInputs)
   const [editingTitle, setEditingTitle] = useState(false)
   const [titleDraft, setTitleDraft] = useState(idea.title ?? '')
+  const [post, setPost] = useState(idea.synthesis ?? '')
+  const [platform, setPlatform] = useState(idea.platform ?? '')
   const [completing, setCompleting] = useState(false)
-  const [promoting, setPromoting] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<ActiveTab>('notes')
+  const [copied, setCopied] = useState(false)
+  const [sourceOpen, setSourceOpen] = useState(true)
   const titleRef = useRef<HTMLInputElement>(null)
+  const postRef = useRef<HTMLTextAreaElement>(null)
   const router = useRouter()
+
+  // Source material = the note inputs seeded from the Dump / Idea Sex.
+  const sources = initialInputs.filter((i) => i.is_note)
+
+  // ── Post autosave (debounce + blur + Cmd-S + unmount flush) ────
+  const dirty = post !== (idea.synthesis ?? '')
+  const [saveState, setSaveState] = useState<SaveState>('saved')
+  const postRefVal = useRef(post)
+  postRefVal.current = post
+  const dirtyRef = useRef(dirty)
+  dirtyRef.current = dirty
+  const savingRef = useRef(false)
+
+  async function saveNow() {
+    if (savingRef.current || !dirtyRef.current) return
+    savingRef.current = true
+    setSaveState('saving')
+    try {
+      const res = await fetch(`/api/ideas/${idea.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ synthesis: postRefVal.current.trim() || null }),
+      })
+      if (res.ok) { const { idea: u } = await res.json(); setIdea(u); setSaveState('saved') }
+      else setSaveState('dirty')
+    } catch { setSaveState('dirty') }
+    finally { savingRef.current = false }
+  }
+
+  useEffect(() => { setSaveState(dirty ? 'dirty' : 'saved') }, [dirty])
+  useEffect(() => {
+    if (!dirty) return
+    const t = setTimeout(() => saveNow(), 800)
+    return () => clearTimeout(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post])
+  useEffect(() => {
+    return () => {
+      if (!dirtyRef.current) return
+      try {
+        fetch(`/api/ideas/${idea.id}`, {
+          method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ synthesis: postRefVal.current.trim() || null }), keepalive: true,
+        })
+      } catch { /* best effort */ }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveNow() }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function saveTitle() {
     setEditingTitle(false)
@@ -33,90 +103,49 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
     if (trimmed === idea.title) return
     setIdea((i) => ({ ...i, title: trimmed }))
     await fetch(`/api/ideas/${idea.id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ title: trimmed }),
     })
   }
 
-  async function handleDelete() {
-    if (!window.confirm('Idee löschen? Das kann nicht rückgängig gemacht werden.')) return
+  async function changePlatform(value: string) {
+    setPlatform(value)
+    setIdea((i) => ({ ...i, platform: value || null }))
+    await fetch(`/api/ideas/${idea.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ platform: value || null }),
+    })
+  }
+
+  async function copyPost() {
     try {
-      const res = await fetch(`/api/ideas/${idea.id}`, { method: 'DELETE' })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        alert(`Löschen fehlgeschlagen: ${data.error ?? res.status}`)
-        return
-      }
-      router.push('/garden')
-    } catch (err) {
-      alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
+      await navigator.clipboard.writeText(post)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 1500)
+    } catch {
+      alert('Kopieren nicht möglich — bitte manuell markieren.')
     }
   }
 
-  async function handlePromoteToProject() {
-    if (promoting) return
-    const confirmed = window.confirm(
-      'Diese Idee in ein Projekt verwandeln? Die Notes werden übernommen, die Idee bleibt bestehen.'
-    )
-    if (!confirmed) return
-    setPromoting(true)
-    try {
-      const res = await fetch('/api/projects', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ source_idea_ids: [idea.id], title: idea.title ?? null }),
-      })
-      const data = await res.json()
-      if (!res.ok || !data.project?.id) {
-        console.error('[promote-to-project] failed:', data)
-        alert(`In Projekt fehlgeschlagen: ${data?.error ?? res.status}`)
-        setPromoting(false)
-        return
-      }
-      router.push(`/projects/${data.project.id}`)
-    } catch (err) {
-      console.error('[promote-to-project] network error:', err)
-      alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
-      setPromoting(false)
-    }
+  async function handleDelete() {
+    if (!window.confirm('Post löschen? Das kann nicht rückgängig gemacht werden.')) return
+    const res = await fetch(`/api/ideas/${idea.id}`, { method: 'DELETE' })
+    if (!res.ok) { const d = await res.json().catch(() => ({})); alert(`Löschen fehlgeschlagen: ${d.error ?? res.status}`); return }
+    router.push('/garden')
   }
 
   async function handleMarkDone() {
     if (completing) return
-    const confirmed = window.confirm(
-      'Idee als fertig markieren? Sie wird ins Archiv verschoben und als Markdown heruntergeladen.'
-    )
-    if (!confirmed) return
+    if (!window.confirm('Post als fertig markieren? Wandert ins Kompost-Archiv.')) return
     setCompleting(true)
     try {
-      const mdRes = await fetch(`/api/export/${idea.id}`)
-      if (!mdRes.ok) {
-        const data = await mdRes.json().catch(() => ({}))
-        alert(`Export fehlgeschlagen: ${data.error ?? mdRes.status}`)
-        setCompleting(false)
-        return
-      }
-      const { markdown } = await mdRes.json()
-      const blob = new Blob([markdown], { type: 'text/markdown' })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${(idea.title ?? 'idea').replace(/[^a-z0-9]/gi, '-').toLowerCase()}.md`
-      a.click()
-      URL.revokeObjectURL(url)
-
-      const patchRes = await fetch(`/api/ideas/${idea.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+      // Flush any pending edit first so the archived post is current.
+      if (dirtyRef.current) await saveNow()
+      const res = await fetch(`/api/ideas/${idea.id}`, {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'done', completed_at: new Date().toISOString() }),
       })
-      if (!patchRes.ok) {
-        const data = await patchRes.json().catch(() => ({}))
-        alert(`Status-Update fehlgeschlagen: ${data.error ?? patchRes.status}`)
-        setCompleting(false)
-        return
-      }
+      if (!res.ok) { const d = await res.json().catch(() => ({})); alert(`Fehlgeschlagen: ${d.error ?? res.status}`); setCompleting(false); return }
       router.push('/done')
     } catch (err) {
       alert(`Netzwerkfehler: ${err instanceof Error ? err.message : String(err)}`)
@@ -124,95 +153,71 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
     }
   }
 
-  return (
-    // Use flex column, height fills viewport minus the fixed NavBar (56px = pb-14)
-    <div className="flex flex-col bg-garden-bg" style={{ height: '100dvh', paddingBottom: '56px' }}>
+  const chars = post.length
+  const limit = PLATFORMS.find((p) => p.value === platform)?.limit ?? null
+  const over = limit !== null && chars > limit
 
+  return (
+    <div className="flex flex-col bg-garden-bg" style={{ height: '100dvh', paddingBottom: '56px' }}>
       {/* ── Header ── */}
-      <header className="flex-shrink-0 bg-garden-surface border-b border-garden-border px-4 md:px-6 py-3 md:py-3.5 flex items-center gap-3">
-        <Link
-          href="/garden"
-          className="p-1.5 -ml-1.5 rounded-lg hover:bg-garden-border/40 text-garden-muted transition-colors"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-            strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <header className="flex-shrink-0 bg-garden-surface border-b border-garden-hairline px-4 md:px-6 py-3 flex items-center gap-3">
+        <Link href="/garden" className="p-1.5 -ml-1.5 rounded-lg hover:bg-garden-hairline-soft text-garden-muted hover:text-garden-ink transition-colors" title="Zurück zum Garden">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
         </Link>
 
         <div className="flex-1 min-w-0">
+          <div className="font-mono micro-caps text-garden-accent mb-0.5">Post</div>
           {editingTitle ? (
             <input
               ref={titleRef}
               value={titleDraft}
               onChange={(e) => setTitleDraft(e.target.value)}
               onBlur={saveTitle}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') saveTitle()
-                if (e.key === 'Escape') { setTitleDraft(idea.title ?? ''); setEditingTitle(false) }
-              }}
-              className="w-full bg-transparent font-display text-base md:text-xl text-garden-text outline-none border-b border-garden-accent"
-              placeholder="Titel hinzufügen…"
+              onKeyDown={(e) => { if (e.key === 'Enter') saveTitle(); if (e.key === 'Escape') { setTitleDraft(idea.title ?? ''); setEditingTitle(false) } }}
+              className="w-full bg-transparent font-display text-base md:text-xl text-garden-ink outline-none border-b border-garden-accent"
+              placeholder="Titel (nur für dich)…"
               autoFocus
             />
           ) : (
             <button
               onClick={() => { setEditingTitle(true); setTimeout(() => titleRef.current?.select(), 10) }}
-              className="font-display text-base md:text-xl text-garden-text hover:text-garden-accent transition-colors truncate block max-w-full text-left"
+              className="font-display text-base md:text-xl text-garden-ink hover:text-garden-accent transition-colors truncate block max-w-full text-left"
               style={{ fontWeight: 500 }}
             >
-              {idea.title || 'Unbenannte Idee'}
+              {idea.title || 'Unbenannter Post'}
             </button>
           )}
         </div>
 
-        <button
-          onClick={handlePromoteToProject}
-          disabled={promoting}
-          className="text-xs px-2.5 py-1.5 rounded-lg bg-garden-accent-light text-garden-accent border border-garden-accent/20 font-medium hover:bg-garden-accent/10 transition-colors disabled:opacity-40 whitespace-nowrap"
-          title="In ein Projekt verwandeln"
-        >
-          {promoting ? '…' : '→ Projekt'}
-        </button>
+        {/* Save state */}
+        {saveState === 'saving' ? (
+          <span className="hidden sm:flex font-mono micro-caps text-garden-muted-soft items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-garden-accent animate-pulse" />speichert…</span>
+        ) : saveState === 'dirty' ? (
+          <button onClick={saveNow} className="hidden sm:flex font-mono micro-caps text-garden-accent items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-garden-accent" />Speichern</button>
+        ) : (
+          <span className="hidden sm:flex font-mono micro-caps text-garden-muted-soft items-center gap-1.5">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>gespeichert
+          </span>
+        )}
 
-        {/* ⋮ menu — destructive/archival actions tucked away */}
         <div className="relative">
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className="p-1.5 rounded-lg text-garden-muted/60 hover:text-garden-text hover:bg-garden-bg transition-colors"
-            title="Weitere Aktionen"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-              <circle cx="12" cy="5" r="1.8"/>
-              <circle cx="12" cy="12" r="1.8"/>
-              <circle cx="12" cy="19" r="1.8"/>
-            </svg>
+          <button onClick={() => setMenuOpen((v) => !v)} className="p-1.5 rounded-lg text-garden-muted/70 hover:text-garden-ink hover:bg-garden-hairline-soft transition-colors" title="Weitere Aktionen">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></svg>
           </button>
           {menuOpen && (
             <>
               <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(false)} />
-              <div className="absolute top-full right-0 mt-1 z-30 bg-garden-surface border border-garden-border rounded-xl shadow-paper-lg overflow-hidden min-w-52 animate-fade-in">
-                <button
-                  onClick={() => { setMenuOpen(false); handleMarkDone() }}
-                  disabled={completing || idea.status === 'done'}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-seed hover:bg-garden-seed-light transition-colors text-left disabled:opacity-40"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="20 6 9 17 4 12"/>
-                  </svg>
-                  Als fertig markieren
+              <div className="absolute top-full right-0 mt-1 z-30 bg-garden-surface border border-garden-hairline rounded-xl shadow-paper-lg overflow-hidden min-w-52 animate-fade-in">
+                <button onClick={() => { setMenuOpen(false); handleMarkDone() }} disabled={completing} className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-accent hover:bg-garden-accent-soft transition-colors text-left disabled:opacity-40">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  Fertig — ins Kompost
                 </button>
-                <div className="h-px bg-garden-border/60" />
-                <button
-                  onClick={() => { setMenuOpen(false); handleDelete() }}
-                  className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-danger hover:bg-garden-danger-light transition-colors text-left"
-                >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <polyline points="3 6 5 6 21 6"/>
-                    <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
-                    <path d="M10 11v6M14 11v6M9 6V4h6v2"/>
-                  </svg>
-                  Idee löschen
+                <div className="h-px bg-garden-hairline" />
+                <button onClick={() => { setMenuOpen(false); handleDelete() }} className="w-full flex items-center gap-2.5 px-4 py-3 text-sm text-garden-muted hover:bg-garden-hairline-soft hover:text-garden-accent transition-colors text-left">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+                  Löschen
                 </button>
               </div>
             </>
@@ -220,54 +225,95 @@ export default function IdeaDetailClient({ idea: initialIdea, initialInputs }: P
         </div>
       </header>
 
-      {/* ── Mobile tabs ── */}
-      <div className="flex-shrink-0 flex md:hidden border-b border-garden-border bg-garden-surface">
-        {(['notes', 'chat'] as ActiveTab[]).map((tab) => (
+      {/* ── Main ── */}
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-hidden max-w-6xl w-full mx-auto">
+
+        {/* Left: source material (read-only) */}
+        <div className="flex-shrink-0 md:flex-shrink md:w-2/5 md:border-r border-garden-hairline flex flex-col min-h-0 bg-garden-surface/40">
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2.5 text-xs font-medium transition-colors ${
-              activeTab === tab
-                ? 'text-garden-accent border-b-2 border-garden-accent'
-                : 'text-garden-muted'
-            }`}
+            onClick={() => setSourceOpen((v) => !v)}
+            className="flex-shrink-0 px-4 md:px-6 py-2.5 border-b border-garden-hairline flex items-center gap-2 group md:cursor-default"
           >
-            {tab === 'notes' ? 'Notes' : 'KI-Chat'}
+            <span className="font-mono micro-caps text-garden-muted">Quelle{sources.length === 1 ? '' : 'n'}</span>
+            <span className="font-mono micro-caps text-garden-muted-soft">{sources.length}</span>
+            <span className="flex-1" />
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
+              className={`md:hidden text-garden-muted-soft transition-transform ${sourceOpen ? '' : '-rotate-90'}`}>
+              <polyline points="6 9 12 15 18 9"/>
+            </svg>
           </button>
-        ))}
-      </div>
-
-      {/* ── Main panels — flex-1 with min-h-0 is the key for inner scroll ── */}
-      <div className="flex-1 flex min-h-0 overflow-hidden max-w-7xl w-full mx-auto">
-
-        {/* Left: Notes */}
-        <div className={`flex flex-col w-full md:w-1/2 md:border-r border-garden-border min-h-0 ${
-          activeTab === 'notes' ? 'flex' : 'hidden md:flex'
-        }`}>
-          <div className="flex-shrink-0 px-4 py-2 border-b border-garden-border/50 bg-garden-surface/60">
-            <p className="text-[10px] uppercase tracking-widest text-garden-muted font-medium">Notes</p>
+          <div className={`flex-1 overflow-y-auto px-4 md:px-6 py-4 space-y-3 ${sourceOpen ? 'block' : 'hidden md:block'}`}
+               style={{ maxHeight: sourceOpen ? undefined : 0 }}>
+            {sources.length === 0 ? (
+              <p className="font-display italic text-garden-muted-soft text-[14px]">Kein Quellmaterial.</p>
+            ) : (
+              sources.map((s) => (
+                <div key={s.id} className="rounded-xl border border-garden-hairline bg-garden-surface p-3">
+                  {isImageNote(s.content) ? (
+                    <Image src={imageUrl(s.content)} alt="Quelle" width={400} height={300} unoptimized className="w-full object-cover max-h-48 rounded-lg" />
+                  ) : (
+                    <p className="font-serif text-garden-ink leading-relaxed whitespace-pre-wrap break-words" style={{ fontSize: 14 }}>{s.content}</p>
+                  )}
+                  {s.image_transcript && (
+                    <p className="mt-1.5 text-[12px] text-garden-muted leading-relaxed whitespace-pre-wrap">{s.image_transcript}</p>
+                  )}
+                </div>
+              ))
+            )}
           </div>
-          <IdeaNotes
-            ideaId={idea.id}
-            notes={inputs}
-            onNoteAdded={(note) => setInputs((prev) => [...prev, note])}
-            onNoteRemoved={(id) => setInputs((prev) => prev.filter((i) => i.id !== id))}
-            onNoteUpdated={(updated) => setInputs((prev) => prev.map((i) => i.id === updated.id ? updated : i))}
-          />
         </div>
 
-        {/* Right: Chat */}
-        <div className={`flex flex-col w-full md:w-1/2 min-h-0 ${
-          activeTab === 'chat' ? 'flex' : 'hidden md:flex'
-        }`}>
-          <div className="flex-shrink-0 px-4 py-2 border-b border-garden-border/50 bg-garden-surface/60">
-            <p className="text-[10px] uppercase tracking-widest text-garden-muted font-medium">KI-Chat</p>
+        {/* Right: post editor */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-shrink-0 px-4 md:px-6 py-2.5 border-b border-garden-hairline flex items-center gap-3">
+            <span className="font-mono micro-caps text-garden-accent">Dein Post</span>
+            <span className="flex-1" />
+            <select
+              value={platform}
+              onChange={(e) => changePlatform(e.target.value)}
+              className="font-mono micro-caps bg-garden-surface border border-garden-hairline rounded-full px-2.5 py-1 text-garden-ink outline-none focus:border-garden-accent/40"
+            >
+              {PLATFORMS.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+            </select>
+            <span className={`font-mono micro-caps tabnums ${over ? 'text-garden-accent' : 'text-garden-muted-soft'}`}>
+              {chars}{limit !== null ? ` / ${limit}` : ''}
+            </span>
           </div>
-          <IdeaChat
-            ideaId={idea.id}
-            allInputs={inputs}
-            onMessageAdded={setInputs}
-          />
+
+          <div className="flex-1 min-h-0 overflow-y-auto">
+            <textarea
+              ref={postRef}
+              value={post}
+              onChange={(e) => setPost(e.target.value)}
+              onBlur={saveNow}
+              placeholder="Schreib es in deinen eigenen Worten…"
+              className="w-full h-full min-h-[300px] bg-transparent resize-none outline-none px-4 md:px-6 py-4 text-garden-ink placeholder:text-garden-muted-soft/60 leading-relaxed"
+              style={{ fontSize: 16, lineHeight: 1.6 }}
+            />
+          </div>
+
+          <div className="flex-shrink-0 px-4 md:px-6 py-3 border-t border-garden-hairline flex items-center gap-3">
+            <button
+              onClick={copyPost}
+              disabled={!post.trim()}
+              className="font-mono micro-caps flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-garden-hairline text-garden-ink hover:border-garden-accent/40 hover:bg-garden-accent-soft/30 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {copied ? (
+                <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Kopiert</>
+              ) : (
+                <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Kopieren</>
+              )}
+            </button>
+            <span className="flex-1" />
+            <button
+              onClick={handleMarkDone}
+              disabled={completing}
+              className="font-mono micro-caps flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-garden-accent text-white hover:bg-garden-accent-deep transition-colors disabled:opacity-40"
+            >
+              Fertig
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            </button>
+          </div>
         </div>
       </div>
 
