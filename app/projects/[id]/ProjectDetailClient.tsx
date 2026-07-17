@@ -16,8 +16,6 @@ interface Props {
   parentBookTitle?: string | null
 }
 
-type ActiveTab = 'outline' | 'chat'
-
 export default function ProjectDetailClient({ project: initialProject, initialInputs, parentBookTitle = null }: Props) {
   const [project, setProject] = useState<Project>(initialProject)
   const [inputs, setInputs] = useState<Input[]>(initialInputs)
@@ -28,12 +26,10 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
   const kernideeSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [brainDumpDraft, setBrainDumpDraft] = useState(project.brain_dump ?? '')
-  const [brainDumpOpen, setBrainDumpOpen] = useState(!!project.brain_dump)
   const brainDumpSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const [completing, setCompleting] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
-  const [activeTab, setActiveTab] = useState<ActiveTab>('outline')
   const [chatOpen, setChatOpen] = useState(false)
   const [chatRole, setChatRole] = useState<ChatRole>((project.chat_role as ChatRole) ?? 'sparring')
 
@@ -317,187 +313,70 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
         </div>
       </header>
 
-      {/* ── Mobile tabs ── */}
-      <div className="flex-shrink-0 flex md:hidden border-b border-garden-hairline bg-garden-surface">
-        {(['outline', 'chat'] as ActiveTab[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2.5 font-mono micro-caps transition-colors ${
-              activeTab === tab
-                ? 'text-garden-accent border-b-2 border-garden-accent'
-                : 'text-garden-muted'
-            }`}
-          >
-            {tab === 'outline' ? 'Outline' : 'KI-Chat'}
-          </button>
-        ))}
-      </div>
+      {/* ── Main: two columns — left Kernidee + Brain Dump, right Outline ── */}
+      <div className="flex-1 flex flex-col md:flex-row min-h-0 overflow-y-auto md:overflow-hidden max-w-6xl w-full mx-auto">
 
-      {/* ── Main panels ── */}
-      <div className="flex-1 flex min-h-0 overflow-hidden max-w-7xl w-full mx-auto">
-
-        {/* LEFT: Kernidee + Outline. When chat is closed, cap width and center
-            so content reads like a document on wide screens. */}
-        <div className={`flex flex-col min-h-0 w-full ${
-          activeTab === 'outline' ? 'flex' : 'hidden md:flex'
-        } ${
-          chatOpen ? 'md:w-2/3 md:border-r border-garden-hairline' : 'md:max-w-4xl md:mx-auto'
-        }`}>
-
-          {/* Kernidee — left-aligned, max-w-2xl column */}
-          <div className="flex-shrink-0 px-4 md:px-8 pt-3 md:pt-4 pb-2.5 border-b border-garden-hairline bg-garden-surface">
-            <div className="max-w-2xl">
-              <p className="font-mono micro-caps text-garden-accent mb-1">Kernidee</p>
-              <textarea
-                value={kernideeDraft}
-                onChange={(e) => setKernideeDraft(e.target.value)}
-                placeholder="Welcher eine Gedanke trägt diesen Text?"
-                rows={1}
-                className="w-full bg-transparent font-display text-garden-ink outline-none placeholder:text-garden-muted-soft/60 resize-none leading-relaxed"
-                style={{
-                  fontSize: 15,
-                  fontStyle: 'italic',
-                  fontWeight: 400,
-                }}
-              />
-            </div>
+        {/* LEFT: Kernidee + Brain Dump (big field) */}
+        <div className="flex-shrink-0 flex flex-col md:w-2/5 md:min-h-0 md:overflow-y-auto md:border-r border-garden-hairline bg-garden-surface/40">
+          {/* Kernidee */}
+          <div className="flex-shrink-0 px-4 md:px-6 pt-4 pb-4 border-b border-garden-hairline">
+            <p className="font-mono micro-caps text-garden-accent mb-1">Kernidee</p>
+            <textarea
+              value={kernideeDraft}
+              onChange={(e) => setKernideeDraft(e.target.value)}
+              placeholder="Welcher eine Gedanke trägt diesen Text?"
+              rows={2}
+              className="w-full bg-transparent font-display text-garden-ink outline-none placeholder:text-garden-muted-soft/60 resize-none leading-relaxed"
+              style={{ fontSize: 15, fontStyle: 'italic', fontWeight: 400 }}
+            />
           </div>
 
-          {/* Brain Dump — bare textarea (like Kernidee), inline chevron toggle (like Outline +) */}
-          <div className="flex-shrink-0 px-4 md:px-8 pt-3 md:pt-4 pb-2.5 border-b border-garden-hairline bg-garden-surface">
-            <div className="max-w-2xl">
-              <button
-                onClick={() => setBrainDumpOpen((v) => !v)}
-                className="flex items-center gap-2 mb-1 group"
-                title={brainDumpOpen ? 'Brain Dump einklappen' : 'Brain Dump aufklappen'}
-              >
-                <p className="font-mono micro-caps text-garden-accent">Brain Dump</p>
-                <span className="p-0.5 rounded text-garden-muted-soft group-hover:text-garden-accent group-hover:bg-garden-accent-soft transition-colors">
-                  <svg
-                    width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
-                    className={`transition-transform ${brainDumpOpen ? '' : '-rotate-90'}`}
-                  >
-                    <polyline points="6 9 12 15 18 9"/>
-                  </svg>
-                </span>
-                {!brainDumpOpen && !brainDumpDraft.trim() && (
-                  <span className="font-mono text-[10px] text-garden-muted-soft italic">leer</span>
-                )}
-              </button>
-              {brainDumpOpen && (
-                <textarea
-                  value={brainDumpDraft}
-                  onChange={(e) => setBrainDumpDraft(e.target.value)}
-                  placeholder="Geistesblitz hin werfen — wird gespeichert."
-                  rows={2}
-                  className="w-full bg-transparent text-garden-ink leading-relaxed resize-none outline-none placeholder:text-garden-muted-soft/60 font-serif"
-                  style={{ fontSize: 15, minHeight: '50px' }}
-                />
-              )}
-            </div>
+          {/* Brain Dump — big, fills the column */}
+          <div className="flex flex-col md:flex-1 md:min-h-0 px-4 md:px-6 pt-4 pb-4">
+            <p className="font-mono micro-caps text-garden-accent mb-2 flex-shrink-0">Brain Dump</p>
+            <textarea
+              value={brainDumpDraft}
+              onChange={(e) => setBrainDumpDraft(e.target.value)}
+              placeholder="Alles, was dir zum Text durch den Kopf geht — Fragmente, Fragen, Richtungen. Wird gespeichert."
+              className="w-full md:flex-1 min-h-[220px] bg-transparent text-garden-ink leading-relaxed resize-none outline-none placeholder:text-garden-muted-soft/60 font-serif"
+              style={{ fontSize: 15 }}
+            />
           </div>
-
-          {/* Outline label + add-section */}
-          <div className="flex-shrink-0 px-4 md:px-8 py-2 border-b border-garden-hairline-soft bg-garden-surface/60">
-            <div className="max-w-2xl flex items-center gap-2">
-              <p className="font-mono micro-caps text-garden-accent">Outline</p>
-              <button
-                onClick={() => outlineRef.current?.addSection()}
-                title="Abschnitt einziehen"
-                className="p-0.5 rounded text-garden-muted-soft hover:text-garden-accent hover:bg-garden-accent-soft transition-colors"
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"/>
-                  <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-              </button>
-            </div>
-          </div>
-
-          <ProjectOutline
-            ref={outlineRef}
-            projectId={project.id}
-            notes={inputs}
-            onNoteAdded={(note) => setInputs((prev) => [...prev, note])}
-            onNoteRemoved={(id) => setInputs((prev) => prev.filter((i) => i.id !== id))}
-            onNoteUpdated={(updated) => setInputs((prev) => prev.map((i) => i.id === updated.id ? updated : i))}
-            onNotesReordered={(reordered) => {
-              const reorderedMap = new Map(reordered.map((n) => [n.id, n]))
-              setInputs((prev) => prev.map((i) => reorderedMap.get(i.id) ?? i))
-            }}
-          />
         </div>
 
-        {/* RIGHT: Chat — collapsible, ~1/3 on desktop */}
-        <div className={`flex flex-col min-h-0 ${
-          activeTab === 'chat' ? 'flex w-full' : 'hidden'
-        } ${
-          chatOpen ? 'md:flex md:w-1/3' : 'md:hidden'
-        }`}>
-          <div className="flex-shrink-0 px-4 py-2 border-b border-garden-hairline-soft bg-garden-surface/60">
-            <div className="flex items-center justify-between gap-2">
-              <p className="font-mono micro-caps text-garden-accent">KI-Chat</p>
-              <button
-                onClick={() => setChatOpen(false)}
-                className="hidden md:flex font-mono micro-caps text-garden-muted-soft hover:text-garden-ink transition-colors items-center gap-1"
-                title="Schließen"
-              >
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                  <line x1="18" y1="6" x2="6" y2="18"/>
-                  <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-              </button>
-            </div>
-            {/* Role selector — three pills with message counts */}
-            <div className="mt-2 flex items-center gap-1">
-              {([
-                { key: 'sparring',   label: 'Sparring' },
-                { key: 'researcher', label: 'Recherche' },
-                { key: 'editor',     label: 'Lektor' },
-              ] as { key: ChatRole; label: string }[]).map(({ key, label }) => {
-                const active = chatRole === key
-                const count = inputs.filter(
-                  (i) => i.chat_role === key && i.is_note !== true && i.role === 'assistant',
-                ).length
-                return (
-                  <button
-                    key={key}
-                    onClick={() => changeChatRole(key)}
-                    className={`font-mono micro-caps px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 ${
-                      active
-                        ? 'bg-garden-accent-soft text-garden-accent-deep'
-                        : 'text-garden-muted-soft hover:text-garden-ink'
-                    }`}
-                    title={
-                      key === 'sparring' ? 'Stellt eine scharfe Frage, treibt das Denken weiter — sieht nur Kernidee + Outline'
-                      : key === 'researcher' ? 'Hilft bei Recherche, erklärt Konzepte, zeigt Lücken — sieht nur Kernidee + Outline'
-                      : 'Schärft den geschriebenen Text — sieht Kernidee + Outline + den Text'
-                    }
-                  >
-                    {label}
-                    {count > 0 && (
-                      <span className={`tabnums text-[9px] ${active ? 'text-garden-accent-deep' : 'text-garden-muted-soft'}`}>
-                        {count}
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
+        {/* RIGHT: Outline */}
+        <div className="flex flex-col flex-1 md:min-h-0 min-h-[60vh]">
+          <div className="flex-shrink-0 px-4 md:px-6 py-2.5 border-b border-garden-hairline-soft bg-garden-surface/60 flex items-center gap-2">
+            <p className="font-mono micro-caps text-garden-accent">Outline</p>
+            <button
+              onClick={() => outlineRef.current?.addSection()}
+              title="Abschnitt einziehen"
+              className="p-0.5 rounded text-garden-muted-soft hover:text-garden-accent hover:bg-garden-accent-soft transition-colors"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+              </svg>
+            </button>
           </div>
-          <IdeaChat
-            ideaId={project.id}
-            chatEndpoint={`/api/projects/${project.id}/chat`}
-            chatRole={chatRole}
-            allInputs={inputs}
-            onMessageAdded={setInputs}
-          />
+          <div className="flex-1 min-h-0">
+            <ProjectOutline
+              ref={outlineRef}
+              projectId={project.id}
+              notes={inputs}
+              onNoteAdded={(note) => setInputs((prev) => [...prev, note])}
+              onNoteRemoved={(id) => setInputs((prev) => prev.filter((i) => i.id !== id))}
+              onNoteUpdated={(updated) => setInputs((prev) => prev.map((i) => i.id === updated.id ? updated : i))}
+              onNotesReordered={(reordered) => {
+                const reorderedMap = new Map(reordered.map((n) => [n.id, n]))
+                setInputs((prev) => prev.map((i) => reorderedMap.get(i.id) ?? i))
+              }}
+            />
+          </div>
         </div>
       </div>
 
-      {/* Floating KI-Chat tab on right edge — desktop only, when chat is closed */}
+      {/* Floating KI-Chat tab on right edge — opens the overlay */}
       {!chatOpen && (
         <button
           onClick={() => setChatOpen(true)}
@@ -508,11 +387,82 @@ export default function ProjectDetailClient({ project: initialProject, initialIn
             strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          <span className="font-mono micro-caps writing-mode-vertical" style={{ writingMode: 'vertical-rl' }}>
+          <span className="font-mono micro-caps" style={{ writingMode: 'vertical-rl' }}>
             KI-Chat
           </span>
         </button>
       )}
+
+      {/* KI-Chat — slide-over overlay panel (right), so it never crowds the two columns */}
+      <div
+        className={`fixed inset-y-0 right-0 z-40 w-full md:w-[26rem] bg-garden-bg border-l border-garden-hairline shadow-paper-lg transform transition-transform duration-300 flex flex-col ${
+          chatOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+        style={{ paddingBottom: '56px' }}
+        aria-hidden={!chatOpen}
+      >
+        <div className="flex-shrink-0 px-4 py-3 border-b border-garden-hairline bg-garden-surface">
+          <div className="flex items-center justify-between gap-2">
+            <p className="font-mono micro-caps text-garden-accent">KI-Chat</p>
+            <button
+              onClick={() => setChatOpen(false)}
+              className="p-1 -mr-1 text-garden-muted hover:text-garden-ink transition-colors"
+              title="Schließen"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+          {/* Role selector — three pills with message counts */}
+          <div className="mt-2 flex items-center gap-1">
+            {([
+              { key: 'sparring',   label: 'Sparring' },
+              { key: 'researcher', label: 'Recherche' },
+              { key: 'editor',     label: 'Lektor' },
+            ] as { key: ChatRole; label: string }[]).map(({ key, label }) => {
+              const active = chatRole === key
+              const count = inputs.filter(
+                (i) => i.chat_role === key && i.is_note !== true && i.role === 'assistant',
+              ).length
+              return (
+                <button
+                  key={key}
+                  onClick={() => changeChatRole(key)}
+                  className={`font-mono micro-caps px-2.5 py-1 rounded transition-colors flex items-center gap-1.5 ${
+                    active
+                      ? 'bg-garden-accent-soft text-garden-accent-deep'
+                      : 'text-garden-muted-soft hover:text-garden-ink'
+                  }`}
+                  title={
+                    key === 'sparring' ? 'Stellt eine scharfe Frage, treibt das Denken weiter — sieht nur Kernidee + Outline'
+                    : key === 'researcher' ? 'Hilft bei Recherche, erklärt Konzepte, zeigt Lücken — sieht nur Kernidee + Outline'
+                    : 'Schärft den geschriebenen Text — sieht Kernidee + Outline + den Text'
+                  }
+                >
+                  {label}
+                  {count > 0 && (
+                    <span className={`tabnums text-[9px] ${active ? 'text-garden-accent-deep' : 'text-garden-muted-soft'}`}>
+                      {count}
+                    </span>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+        <div className="flex-1 min-h-0 flex flex-col">
+          {chatOpen && (
+            <IdeaChat
+              ideaId={project.id}
+              chatEndpoint={`/api/projects/${project.id}/chat`}
+              chatRole={chatRole}
+              allInputs={inputs}
+              onMessageAdded={setInputs}
+            />
+          )}
+        </div>
+      </div>
 
       <NavBar />
     </div>
