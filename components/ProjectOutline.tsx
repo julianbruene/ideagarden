@@ -281,14 +281,14 @@ function SortableNote({
               onChange={(e) => setEditDraft(e.target.value)}
               onBlur={saveEdit}
               onKeyDown={handleEditKeyDown}
-              className="w-full bg-white border border-garden-accent/40 rounded-lg px-2.5 py-1.5 text-garden-ink leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20"
+              className="w-full bg-white border border-garden-accent/40 rounded-lg px-2.5 py-1.5 text-garden-ink leading-relaxed resize-y outline-none focus:ring-2 focus:ring-garden-accent/20 font-serif"
               style={{ fontSize: 15 }}
               rows={Math.max(3, Math.min(12, editDraft.split('\n').length + 1))}
             />
           ) : (
             <p
               onClick={() => onEdit(note.id, 'content')}
-              className="text-garden-ink leading-relaxed whitespace-pre-wrap break-words cursor-text hover:bg-white/40 -mx-1 px-1 rounded transition-colors"
+              className="text-garden-ink leading-relaxed whitespace-pre-wrap break-words cursor-text hover:bg-white/40 -mx-1 px-1 rounded transition-colors font-serif"
               style={{ fontSize: 15 }}
               title="Klick zum Bearbeiten"
             >
