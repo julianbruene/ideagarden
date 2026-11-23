@@ -125,11 +125,14 @@ export default function RewritePanel({ post, onClose, onChange }: Props) {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black/10 z-40" onClick={onClose} />
-      <aside className="fixed right-0 top-0 h-screen w-full md:w-[34rem] bg-garden-bg border-l border-garden-hairline z-50 flex flex-col shadow-xl">
+      {/* Split screen: covers the content area, sidebar stays visible */}
+      <div className="fixed inset-0 md:left-60 bg-garden-bg z-50 flex flex-col">
         {/* Header */}
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-garden-hairline">
-          <span className="font-mono micro-caps text-garden-muted-soft">In deinen Worten</span>
+        <div className="flex items-center gap-3 px-6 md:px-10 py-4 border-b border-garden-hairline">
+          <span className="font-display italic text-garden-ink text-[16px]" style={{ fontWeight: 500 }}>
+            {post.author_name || '@' + post.author_username}
+          </span>
+          <span className="font-mono micro-caps text-garden-muted-soft hidden sm:inline">→ in deinen Worten</span>
           <span className="flex-1" />
           <button
             onClick={save}
@@ -151,26 +154,34 @@ export default function RewritePanel({ post, onClose, onChange }: Props) {
           </button>
         </div>
 
-        {/* Original */}
-        <div className="px-6 pt-4 border-b border-garden-hairline-soft">
+        <div className="flex-1 min-h-0 flex flex-col md:flex-row">
+        {/* LEFT — Original */}
+        <div className="flex-shrink-0 md:w-1/2 md:min-h-0 flex flex-col border-b md:border-b-0 md:border-r border-garden-hairline bg-garden-surface/40">
           <button
             onClick={() => setShowOriginal((v) => !v)}
-            className="font-mono micro-caps text-garden-muted-soft hover:text-garden-ink mb-2"
+            className="font-mono micro-caps text-garden-muted-soft hover:text-garden-ink text-left px-6 md:px-10 pt-5 pb-3 md:pointer-events-none"
           >
-            {showOriginal ? '▾' : '▸'} Original · {post.author_name || '@' + post.author_username}
+            <span className="md:hidden">{showOriginal ? '▾ ' : '▸ '}</span>Original
           </button>
-          {showOriginal && (
+          <div className={`${showOriginal ? 'block' : 'hidden'} md:block overflow-y-auto max-h-[35vh] md:max-h-none md:flex-1 px-6 md:px-10 pb-6`}>
             <p
-              className="font-serif text-garden-muted whitespace-pre-wrap overflow-y-auto max-h-[30vh] pb-4 pr-1"
-              style={{ fontSize: 14, lineHeight: 1.6 }}
+              className="font-serif text-garden-ink whitespace-pre-wrap pretty"
+              style={{ fontSize: 17, lineHeight: 1.65 }}
             >
               {post.main_text}
             </p>
-          )}
+            {post.main_source !== 'caption' && (post.caption ?? '').trim() && (
+              <p className="font-serif text-garden-muted whitespace-pre-wrap mt-5 pl-3 border-l-2 border-garden-hairline text-[14px] leading-relaxed">
+                {post.caption}
+              </p>
+            )}
+          </div>
         </div>
 
-        {/* Writing surface */}
-        <div className="flex-1 min-h-0 flex flex-col px-6 pt-4">
+        {/* RIGHT — Writing surface */}
+        <div className="flex-1 min-h-0 flex flex-col">
+        <div className="flex-1 min-h-0 flex flex-col px-6 md:px-10 pt-5">
+          <span className="font-mono micro-caps text-garden-muted-soft mb-3">Deine Worte</span>
           <textarea
             ref={textareaRef}
             value={draft}
@@ -183,7 +194,7 @@ export default function RewritePanel({ post, onClose, onChange }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-garden-hairline space-y-3">
+        <div className="px-6 md:px-10 py-4 border-t border-garden-hairline space-y-3">
           <div className="flex items-center gap-2 flex-wrap">
             {PLATFORMS.map((p) => (
               <button
@@ -226,7 +237,9 @@ export default function RewritePanel({ post, onClose, onChange }: Props) {
             )}
           </div>
         </div>
-      </aside>
+        </div>
+        </div>
+      </div>
     </>
   )
 }
