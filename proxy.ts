@@ -32,7 +32,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Redirect unauthenticated users to /auth
-  const protectedPaths = ['/dump', '/garden', '/done']
+  const protectedPaths = ['/dump', '/garden', '/done', '/lesen']
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p))
 
   if (!user && isProtected) {

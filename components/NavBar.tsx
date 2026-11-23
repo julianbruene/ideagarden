@@ -11,6 +11,7 @@ const gardenNav = [
   { href: '/projects', label: 'Projects' },
   { href: '/done',     label: 'Kompost' },
   { href: '/handwerk', label: 'Handwerk' },
+  { href: '/lesen',    label: 'Lesen' },
 ]
 
 const lernenNav = [
@@ -89,7 +90,7 @@ export default function NavBar() {
               className="relative flex items-center justify-center flex-1"
             >
               <span
-                className="font-display text-[16px]"
+                className={`font-display ${navItems.length > 5 ? 'text-[13px]' : 'text-[16px]'}`}
                 style={{
                   fontWeight: isActive ? 500 : 400,
                   fontStyle: isActive ? 'italic' : 'normal',

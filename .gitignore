@@ -35,3 +35,6 @@ next-env.d.ts
 
 # design handoff bundles
 .design-tmp/
+
+# Lesen: imported creator texts (personal reading copies, not for git)
+/feed-import/

@@ -165,3 +165,26 @@ export interface CraftSnippet {
   kniff: string | null
   created_at: string
 }
+
+export type FeedStatus = 'new' | 'read' | 'archived'
+
+export interface FeedPost {
+  id: string
+  user_id: string
+  platform: string
+  external_id: string
+  url: string | null
+  author_username: string
+  author_name: string | null
+  post_type: 'reel' | 'carousel' | 'post'
+  published_at: string | null
+  caption: string | null
+  transcript: string | null
+  slide_text: string | null
+  on_screen_text: string | null
+  main_text: string
+  main_source: 'transcript' | 'slides' | 'onscreen' | 'caption'
+  truncated: boolean
+  status: FeedStatus
+  created_at: string
+}

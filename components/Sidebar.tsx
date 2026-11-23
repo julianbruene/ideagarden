@@ -12,6 +12,7 @@ const gardenNav = [
   { href: '/projects', label: 'Projects', hint: '⌘3' },
   { href: '/done',     label: 'Kompost',  hint: '⌘4' },
   { href: '/handwerk', label: 'Handwerk', hint: '⌘5' },
+  { href: '/lesen',    label: 'Lesen',    hint: '⌘6' },
 ]
 
 const lernenNav = [
