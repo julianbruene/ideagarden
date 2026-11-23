@@ -186,5 +186,13 @@ export interface FeedPost {
   main_source: 'transcript' | 'slides' | 'onscreen' | 'caption'
   truncated: boolean
   status: FeedStatus
+  draft: string | null
+  draft_platform: DraftPlatform
+  draft_status: DraftStatus
+  draft_updated_at: string | null
+  eden_post_id: string | null
   created_at: string
 }
+
+export type DraftPlatform = 'threads' | 'substack' | 'both'
+export type DraftStatus = 'none' | 'writing' | 'ready' | 'sent'

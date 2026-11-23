@@ -6,13 +6,13 @@ import { createClient } from '@/lib/supabase/client'
 
 type Workspace = 'garden' | 'lernen' | 'fiction'
 
+// Dump and Garden were retired from the nav (captures now live in EDEN);
+// their routes still exist so old notes stay reachable.
 const gardenNav = [
-  { href: '/dump',     label: 'Dump',     hint: '⌘1' },
-  { href: '/garden',   label: 'Garden',   hint: '⌘2' },
-  { href: '/projects', label: 'Projects', hint: '⌘3' },
-  { href: '/done',     label: 'Kompost',  hint: '⌘4' },
-  { href: '/handwerk', label: 'Handwerk', hint: '⌘5' },
-  { href: '/lesen',    label: 'Lesen',    hint: '⌘6' },
+  { href: '/lesen',    label: 'Lesen',    hint: '⌘1' },
+  { href: '/projects', label: 'Projects', hint: '⌘2' },
+  { href: '/done',     label: 'Kompost',  hint: '⌘3' },
+  { href: '/handwerk', label: 'Handwerk', hint: '⌘4' },
 ]
 
 const lernenNav = [
@@ -27,7 +27,7 @@ const fictionNav = [
 ]
 
 const workspaces: { key: Workspace; label: string; home: string }[] = [
-  { key: 'garden',  label: 'Garden',  home: '/dump' },
+  { key: 'garden',  label: 'Garden',  home: '/lesen' },
   { key: 'lernen',  label: 'Lernen',  home: '/lernen' },
   { key: 'fiction', label: 'Fiction', home: '/fiction' },
 ]
@@ -80,7 +80,7 @@ export default function Sidebar() {
     <aside className="hidden md:flex fixed left-0 top-0 h-screen w-60 flex-col bg-garden-bg border-r border-garden-hairline z-30">
       {/* Brand */}
       <div className="px-6 pt-6 pb-4">
-        <Link href={workspaces.find((w) => w.key === ws)?.home ?? '/dump'} className="block">
+        <Link href={workspaces.find((w) => w.key === ws)?.home ?? '/lesen'} className="block">
           <span className="flex items-baseline gap-2">
             {/* Mark: italic & + coral dot */}
             <span className="relative inline-block" style={{ width: 28, height: 28 }}>

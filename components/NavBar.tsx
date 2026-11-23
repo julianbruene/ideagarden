@@ -6,12 +6,10 @@ import { usePathname } from 'next/navigation'
 type Workspace = 'garden' | 'lernen' | 'fiction'
 
 const gardenNav = [
-  { href: '/dump',     label: 'Dump' },
-  { href: '/garden',   label: 'Garden' },
+  { href: '/lesen',    label: 'Lesen' },
   { href: '/projects', label: 'Projects' },
   { href: '/done',     label: 'Kompost' },
   { href: '/handwerk', label: 'Handwerk' },
-  { href: '/lesen',    label: 'Lesen' },
 ]
 
 const lernenNav = [
@@ -26,7 +24,7 @@ const fictionNav = [
 ]
 
 const workspaces: { key: Workspace; label: string; home: string }[] = [
-  { key: 'garden',  label: 'Garden',  home: '/dump' },
+  { key: 'garden',  label: 'Garden',  home: '/lesen' },
   { key: 'lernen',  label: 'Lernen',  home: '/lernen' },
   { key: 'fiction', label: 'Fiction', home: '/fiction' },
 ]

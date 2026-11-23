@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import NavBar from '@/components/NavBar'
 import Sidebar from '@/components/Sidebar'
 import type { FeedPost } from '@/lib/types'
+import RewritePanel from './RewritePanel'
 
 interface SourceLite { id: string; title: string | null; author: string | null }
 
@@ -44,7 +45,8 @@ export default function LesenClient({ initialPosts, sources: initialSources }: P
   const router = useRouter()
   const [posts, setPosts] = useState<FeedPost[]>(initialPosts)
   const [sources, setSources] = useState<SourceLite[]>(initialSources)
-  const [showRead, setShowRead] = useState(false)
+  const [view, setView] = useState<'unread' | 'all' | 'drafts'>('unread')
+  const [rewritingId, setRewritingId] = useState<string | null>(null)
   const [activeAuthor, setActiveAuthor] = useState<string | null>(null)
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
   const [flash, setFlash] = useState<{ id: string; msg: string } | null>(null)
@@ -60,13 +62,23 @@ export default function LesenClient({ initialPosts, sources: initialSources }: P
   }, [posts])
 
   const visible = useMemo(() => posts.filter((p) => {
-    if (p.status === 'archived') return false
-    if (!showRead && p.status === 'read') return false
+    if (view === 'drafts') {
+      if (p.draft_status === 'none' && !(p.draft ?? '').trim()) return false
+    } else {
+      if (p.status === 'archived') return false
+      if (view === 'unread' && p.status === 'read') return false
+    }
     if (activeAuthor && p.author_username !== activeAuthor) return false
     return true
-  }), [posts, showRead, activeAuthor])
+  }), [posts, view, activeAuthor])
 
   const newCount = posts.filter((p) => p.status === 'new').length
+  const draftCount = posts.filter((p) => p.draft_status !== 'none' || (p.draft ?? '').trim()).length
+  const rewriting = rewritingId ? posts.find((p) => p.id === rewritingId) ?? null : null
+
+  function patchLocal(id: string, patch: Partial<FeedPost>) {
+    setPosts((ps) => ps.map((x) => (x.id === id ? { ...x, ...patch } : x)))
+  }
 
   function showFlash(id: string, msg: string) {
     setFlash({ id, msg })
@@ -85,23 +97,6 @@ export default function LesenClient({ initialPosts, sources: initialSources }: P
       setPosts(prev)
       alert('Status ändern fehlgeschlagen.')
     }
-  }
-
-  function attribution(p: FeedPost) {
-    return `— ${p.author_name || '@' + p.author_username}${p.url ? `\n${p.url}` : ''}`
-  }
-
-  async function toDump(p: FeedPost) {
-    const sel = selectionIn(p.id)
-    const body = sel || p.main_text
-    const content = `${sel ? `„${body}“` : body}\n\n${attribution(p)}`
-    const res = await fetch('/api/nodes', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ content }),
-    })
-    if (res.ok) showFlash(p.id, sel ? 'Markierung im Dump' : 'Ganzer Text im Dump')
-    else alert('Ins Dump senden fehlgeschlagen.')
   }
 
   async function toHandwerk(p: FeedPost) {
@@ -203,7 +198,7 @@ export default function LesenClient({ initialPosts, sources: initialSources }: P
       <header className="px-6 md:px-12 page-header-pt pb-6 md:pb-8 border-b border-garden-hairline">
         <div className="max-w-2xl md:max-w-3xl mx-auto md:mx-0">
           <div className="flex items-center gap-3 mb-3">
-            <span className="font-mono micro-caps text-garden-muted-soft">06 · Lesen</span>
+            <span className="font-mono micro-caps text-garden-muted-soft">01 · Lesen</span>
             <span className="h-px flex-1 bg-garden-hairline" />
             <span className="font-mono micro-caps text-garden-muted-soft">
               {newCount === 1 ? '1 ungelesen' : `${newCount} ungelesen`}
@@ -224,16 +219,23 @@ export default function LesenClient({ initialPosts, sources: initialSources }: P
       <main className="max-w-2xl mx-auto px-6 md:px-12 pt-6 md:pt-8">
         {/* Controls */}
         <div className="flex items-center gap-3 flex-wrap pb-4" style={{ borderBottom: '1px solid #E8E3D8' }}>
-          <button
-            onClick={() => setShowRead((v) => !v)}
-            className={`font-mono micro-caps px-2 py-0.5 rounded-full border transition-colors ${
-              showRead
-                ? 'bg-garden-accent-soft text-garden-accent-deep border-garden-accent/30'
-                : 'border-garden-hairline text-garden-muted hover:text-garden-ink'
-            }`}
-          >
-            {showRead ? 'Alle' : 'Nur ungelesene'}
-          </button>
+          {([
+            ['unread', 'Ungelesen'],
+            ['all', 'Alle'],
+            ['drafts', `Entwürfe${draftCount ? ` · ${draftCount}` : ''}`],
+          ] as const).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              className={`font-mono micro-caps px-2 py-0.5 rounded-full border transition-colors ${
+                view === key
+                  ? 'bg-garden-accent-soft text-garden-accent-deep border-garden-accent/30'
+                  : 'border-garden-hairline text-garden-muted hover:text-garden-ink'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
           <span className="flex-1" />
           <input
             ref={fileRef}
@@ -279,12 +281,12 @@ export default function LesenClient({ initialPosts, sources: initialSources }: P
           <div className="text-center py-16">
             <p className="font-display text-3xl text-garden-muted-soft mb-3" style={{ fontWeight: 400 }}>—</p>
             <p className="font-display italic text-garden-muted">
-              {posts.length === 0 ? 'Noch nichts zu lesen.' : 'Alles gelesen.'}
+              {view === 'drafts' ? 'Noch keine Entwürfe.' : posts.length === 0 ? 'Noch nichts zu lesen.' : 'Alles gelesen.'}
             </p>
             <p className="font-mono text-[11px] text-garden-muted-soft mt-2">
-              {posts.length === 0
-                ? 'Sag Claude „hol mir neue Posts“ und importier die Datei.'
-                : 'Neue Posts kommen per Import.'}
+              {view === 'drafts'
+                ? 'Bei einem Post auf „Umschreiben“ klicken.'
+                : 'Sag Claude „hol mir neue Posts“.'}
             </p>
           </div>
         )}
@@ -309,6 +311,11 @@ export default function LesenClient({ initialPosts, sources: initialSources }: P
                     {TYPE_LABEL[p.post_type]} · {formatDate(p.published_at)}
                   </span>
                   {p.status === 'new' && <span className="w-1.5 h-1.5 rounded-full bg-garden-accent self-center" />}
+                  {p.draft_status !== 'none' && (
+                    <span className="font-mono micro-caps text-garden-accent">
+                      {p.draft_status === 'sent' ? 'in Eden' : p.draft_status === 'ready' ? 'Entwurf bereit' : 'Entwurf'}
+                    </span>
+                  )}
                 </div>
 
                 <div className="relative">
@@ -354,10 +361,10 @@ export default function LesenClient({ initialPosts, sources: initialSources }: P
                   {flash?.id === p.id && (
                     <span className="font-mono micro-caps text-garden-accent">{flash.msg}</span>
                   )}
-                  <button onMouseDown={keepSelection} onClick={() => toDump(p)}
-                    className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
-                    title="Markierten Text (oder alles) in den Dump">
-                    → Dump
+                  <button onClick={() => setRewritingId(p.id)}
+                    className="font-mono micro-caps text-garden-accent hover:text-garden-accent-deep transition-colors"
+                    title="In deinen Worten umschreiben">
+                    Umschreiben
                   </button>
                   <button onMouseDown={keepSelection} onClick={() => toHandwerk(p)}
                     className="font-mono micro-caps text-garden-muted hover:text-garden-ink transition-colors"
@@ -423,6 +430,15 @@ export default function LesenClient({ initialPosts, sources: initialSources }: P
           })}
         </div>
       </main>
+
+      {rewriting && (
+        <RewritePanel
+          key={rewriting.id}
+          post={rewriting}
+          onClose={() => setRewritingId(null)}
+          onChange={(patch) => patchLocal(rewriting.id, patch)}
+        />
+      )}
 
       <Sidebar />
       <NavBar />

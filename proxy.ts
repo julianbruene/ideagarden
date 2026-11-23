@@ -44,7 +44,7 @@ export async function proxy(request: NextRequest) {
   // Redirect authenticated users away from /auth
   if (user && pathname === '/auth') {
     const url = request.nextUrl.clone()
-    url.pathname = '/dump'
+    url.pathname = '/lesen'
     return NextResponse.redirect(url)
   }
 

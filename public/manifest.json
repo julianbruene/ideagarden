@@ -2,7 +2,7 @@
   "name": "Idea Garden",
   "short_name": "Idea Garden",
   "description": "Ein Ort, an dem Ideen wachsen.",
-  "start_url": "/dump",
+  "start_url": "/lesen",
   "display": "standalone",
   "background_color": "#FAF8F4",
   "theme_color": "#E6734E",
@@ -34,14 +34,14 @@
   ],
   "shortcuts": [
     {
-      "name": "Dump",
-      "url": "/dump",
-      "description": "Roher Gedanken-Stream"
+      "name": "Lesen",
+      "url": "/lesen",
+      "description": "Creator-Texte lesen und umschreiben"
     },
     {
-      "name": "Garden",
-      "url": "/garden",
-      "description": "Wachsende Ideen"
+      "name": "Projects",
+      "url": "/projects",
+      "description": "Projekte und Bücher"
     }
   ]
 }
